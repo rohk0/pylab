@@ -81,6 +81,25 @@ function renderDashboard() {
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--accent-2);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div class="ai-dot"></div>
+          <div style="font-weight:600;color:var(--fg-strong);">AI Learning Companion</div>
+          <span class="ai-badge">groq</span>
+          <span style="flex:1;"></span>
+          <a href="chat.html" class="subtle">Open tutor →</a>
+        </div>
+        <div id="companion-body" style="min-height:30px;font-size:13px;line-height:1.6;">
+          <span class="subtle">Loading personalized message…</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <a class="ai-btn" href="practice.html">Today's challenge</a>
+          <a class="ai-btn" href="chat.html">Ask the tutor</a>
+          <a class="ai-btn" href="explain.html">Explain my code</a>
+          <a class="ai-btn" href="errors.html">Error dictionary</a>
+        </div>
+      </div>
+
       <div class="dash-grid">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -147,6 +166,36 @@ function renderDashboard() {
       </div>
     </div>
   `;
+
+  // Companion message — cached for 6 hours per device.
+  loadCompanionMessage();
+}
+
+function loadCompanionMessage() {
+  const target = document.getElementById("companion-body");
+  if (!target) return;
+  if (!AI.available()) {
+    target.innerHTML = `<span class="subtle">Add a Groq key in <a href="settings.html#ai">Settings</a> to enable personalized AI guidance, daily practice, the tutor chat, and code review.</span>`;
+    return;
+  }
+  const CACHE = "pylab.companion";
+  const TTL = 6 * 60 * 60 * 1000;
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE) || "null");
+    if (cached && Date.now() - cached.at < TTL) {
+      target.innerHTML = AI.renderMD(cached.text);
+      return;
+    }
+  } catch {}
+  const summary = `${Tracker.summaryString()}\n\nNext lesson queued: ${(ALL_LESSONS.find(l => !State.data.completedLessons[l.id]) || {}).title || "everything done!"}`;
+  AI.complete(PROMPTS.companion({ summary }), { maxTokens: 220, temperature: 0.6, speed: "fast" })
+    .then(text => {
+      target.innerHTML = AI.renderMD(text);
+      localStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), text }));
+    })
+    .catch(e => {
+      target.innerHTML = `<span class="subtle">${escapeHTML(AI.friendlyError(e))}</span>`;
+    });
 }
 
 function weekXP() {

@@ -8,11 +8,14 @@ const NAV = [
   { id: "lessons",    href: "lessons.html",    label: "Lessons",    icon: iconBook,    activity: true },
   { id: "challenges", href: "challenges.html", label: "Challenges", icon: iconFlag,    activity: true },
   { id: "playground", href: "playground.html", label: "Playground", icon: iconTerm,    activity: true },
+  { id: "chat",       href: "chat.html",       label: "AI Tutor",   icon: iconChat,    activity: true },
+  { id: "practice",   href: "practice.html",   label: "Daily",      icon: iconSpark,   activity: true },
   { id: "quizzes",    href: "quizzes.html",    label: "Quizzes",    icon: iconCheck,   activity: true },
   { id: "flashcards", href: "flashcards.html", label: "Flashcards", icon: iconLayers,  activity: true },
   { id: "projects",   href: "projects.html",   label: "Projects",   icon: iconBox,     activity: true },
   { id: "skills",     href: "skills.html",     label: "Skill Tree", icon: iconTree,    activity: true },
   { id: "reference",  href: "reference.html",  label: "Reference",  icon: iconBookOpen,activity: true },
+  { id: "errors",     href: "errors.html",     label: "Errors",     icon: iconBug,     activity: true },
   { id: "notes",      href: "notes.html",      label: "Notes",      icon: iconNote,    activity: true },
 ];
 
@@ -26,22 +29,38 @@ function iconBox()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="cu
 function iconTree()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3M12 13.5v2"/></svg>`; }
 function iconBookOpen(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5h7a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H2zM22 5h-7a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h7z"/></svg>`; }
 function iconNote()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9zM14 3v6h7"/></svg>`; }
+function iconChat()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1.3-4.4A8 8 0 1 1 21 12z"/><path d="M9 11h.01M13 11h.01M17 11h.01"/></svg>`; }
+function iconSpark()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M19 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>`; }
+function iconBug()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 8h8M8 8a4 4 0 1 1 8 0M9 8v8a3 3 0 0 0 6 0V8M5 12h3m8 0h3M5 16h3m8 0h3M5 8h3m8 0h3"/></svg>`; }
 function iconSettings(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`; }
 function iconTheme()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`; }
 
 function buildShell(activeId) {
+  // Ensure AI stylesheet is loaded.
+  if (!document.querySelector('link[href="css/ai.css"]')) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet"; link.href = "css/ai.css";
+    document.head.appendChild(link);
+  }
+
+  const aiReady = typeof AI !== "undefined" && AI.available();
+
   const root = document.body;
   root.innerHTML = `
     <div class="app">
       <div class="titlebar">
         <div class="brand"><div class="logo"></div><div class="brand-name"><b>pylab</b> · learn python</div></div>
         <button class="cmd" id="cmd-open">
-          <span>Search lessons, challenges, references…</span>
+          <span>Search lessons, challenges, ask the AI…</span>
           <kbd>Ctrl K</kbd>
         </button>
         <div class="user">
-          <div class="streak" title="Daily streak">${State.data.streak}d streak</div>
-          <div class="xp-pill" title="XP / Level"><span class="dot"></span><span>Lv ${State.data.level}</span><span style="color:var(--fg-mute)">·</span><span>${State.data.xp} XP</span></div>
+          <a href="settings.html#ai" class="ai-badge" title="AI status">
+            <span style="width:6px;height:6px;border-radius:50%;background:${aiReady ? "var(--green)" : "var(--fg-mute)"};display:inline-block;"></span>
+            ${aiReady ? "AI on" : "AI off"}
+          </a>
+          <div class="streak" title="Daily streak">${State.data.streak}d</div>
+          <div class="xp-pill" id="xp-pill" title="XP / Level"><span class="dot"></span><span>Lv ${State.data.level}</span><span style="color:var(--fg-mute)">·</span><span id="xp-num">${State.data.xp} XP</span></div>
         </div>
       </div>
 
@@ -103,7 +122,13 @@ function buildShell(activeId) {
 // ----- Command palette -----
 function buildPaletteIndex() {
   const idx = [];
-  NAV.forEach(n => idx.push({ what: n.label, where: n.href, type: "nav" }));
+  NAV.forEach(n => idx.push({ what: n.label, where: n.href, type: "Nav" }));
+  // AI quick actions
+  idx.push({ what: "Ask AI tutor",            where: "chat.html",     type: "AI" });
+  idx.push({ what: "Daily practice",          where: "practice.html", type: "AI" });
+  idx.push({ what: "Explain my code",         where: "explain.html",  type: "AI" });
+  idx.push({ what: "Python error dictionary", where: "errors.html",   type: "AI" });
+  idx.push({ what: "AI settings",             where: "settings.html#ai", type: "Settings" });
   if (window.LESSONS) {
     LESSONS.forEach(u => u.lessons.forEach(l => idx.push({
       what: l.title, where: `lesson.html?id=${l.id}`, type: `Lesson · ${u.title}`

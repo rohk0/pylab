@@ -61,8 +61,9 @@ function renderChallengePage() {
               <div class="otab active">Output</div>
               <div class="spacer"></div>
               <div class="actions">
+                <button class="ai-btn" id="ai-coach">Ask AI</button>
                 <button class="btn ghost" id="hint-btn">Hint</button>
-                <button class="btn ghost" id="solution-btn">Reveal solution</button>
+                <button class="btn ghost" id="solution-btn">Solution</button>
               </div>
             </div>
             <div class="output-body" id="output"><span class="dim">Run or check your solution to see results here.</span></div>
@@ -99,6 +100,11 @@ function renderChallengePage() {
     if (!confirm("Reveal the solution? You'll learn more by trying first.")) return;
     editor.setValue(ch.solution || "# no solution");
   };
+  document.getElementById("ai-coach").onclick = () => openCoach(
+    { id: ch.id, title: ch.title, prose: ch.description, unitId: ch.id },
+    { prompt: ch.description, solution: ch.solution },
+    editor
+  );
 
   async function doRun() {
     output.innerHTML = "";
@@ -110,7 +116,8 @@ function renderChallengePage() {
 
   async function doCheck() {
     output.innerHTML = `<span class="dim">Grading…</span>`;
-    const r = await Grader.grade(editor.getValue(), ch);
+    const code = editor.getValue();
+    const r = await Grader.grade(code, ch);
     output.innerHTML = "";
     if (r.stdout) {
       const pre = document.createElement("div");
@@ -118,6 +125,15 @@ function renderChallengePage() {
       output.appendChild(pre);
     }
     const fb = document.createElement("div");
+    Tracker.recordAttempt({
+      id: `challenge:${ch.id}`,
+      topic: Tracker.topicsForExercise(ch, [ch.difficulty]),
+      ok: r.ok,
+      errorName: !r.ok && r.message ? guessErrorName(r.message) : null,
+      kind: "challenge",
+      ref: ch.id,
+    });
+    const ctx = { code, ex: { prompt: ch.description }, lesson: { title: ch.title, prose: ch.description }, error: r.message, stdout: r.stdout };
     if (r.ok) {
       fb.className = "feedback ok";
       fb.innerHTML = `<b>✓ All checks passed.</b> ${escapeHTML(r.message)}`;
@@ -130,6 +146,7 @@ function renderChallengePage() {
         extra.innerHTML = `🎉 Challenge solved · <b>+${ch.xp} XP</b>`;
         output.appendChild(extra);
       }
+      appendAIActionRow(output, "ok", ctx);
     } else {
       fb.className = "feedback bad";
       const title = r.kind === "wrong" ? "✗ Failed a hidden test." :
@@ -138,6 +155,7 @@ function renderChallengePage() {
                     r.kind === "empty" ? "Nothing to grade." : "✗";
       fb.innerHTML = `<b>${title}</b><pre style="margin:6px 0 0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;">${escapeHTML(r.message)}</pre>`;
       output.appendChild(fb);
+      appendAIActionRow(output, "bad", ctx);
     }
   }
 }

@@ -226,3 +226,9 @@ assert sorted(groups["png"]) == ["logo.png", "selfie.png"]
 print("CHECK_OK")`,
   },
 ];
+
+// Merge AI-generated projects from localStorage at load time.
+try {
+  const ai = JSON.parse(localStorage.getItem("pylab.aiProjects") || "[]");
+  if (Array.isArray(ai)) for (const p of ai) if (!PROJECTS.find(x => x.id === p.id)) PROJECTS.unshift(p);
+} catch {}

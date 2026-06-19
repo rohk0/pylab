@@ -84,6 +84,8 @@ function renderPlayground() {
         <div class="editor-toolbar">
           <input id="fname" value="${escapeHTML(active.name)}" style="background:transparent;border:0;padding:2px 6px;font-family:var(--font-mono);font-size:11.5px;width:200px;" />
           <span class="spacer"></span>
+          <button class="ai-btn" id="ai-explain">Explain</button>
+          <button class="ai-btn" id="ai-improve">Improve ▾</button>
           <button class="btn ghost" id="copy-btn" title="Copy code">Copy</button>
           <button class="btn ghost" id="share-btn" title="Copy share URL">Share</button>
           <span>Python 3.11</span>
@@ -136,6 +138,34 @@ function renderPlayground() {
       await navigator.clipboard.writeText(editor.getValue());
       State.toast("Code copied to clipboard");
     };
+
+    document.getElementById("ai-explain").onclick = () => {
+      const code = editor.getValue();
+      if (!code.trim()) { State.toast("Editor is empty.", "bad"); return; }
+      AIPanel.open({ title: "Explain my code", subtitle: active.name });
+      AIPanel.body().innerHTML = "";
+      AIPanel.userTurn("Explain this code.");
+      AIPanel.ask(PROMPTS.explainCode({ code, withComments: false }));
+      AIPanel.setFooter(`
+        <div class="ai-pick-row">
+          <button class="btn" id="add-comments">Add inline comments</button>
+        </div>
+      `);
+      setTimeout(() => {
+        const cb = document.getElementById("add-comments");
+        if (cb) cb.onclick = () => {
+          AIPanel.userTurn("Add inline comments to my code.");
+          AIPanel.ask(PROMPTS.improve({ code, kind: "comments" }));
+        };
+      }, 0);
+    };
+
+    document.getElementById("ai-improve").onclick = (e) => {
+      e.stopPropagation();
+      const code = editor.getValue();
+      if (!code.trim()) { State.toast("Editor is empty.", "bad"); return; }
+      showImproveMenu(e.target, code, editor);
+    };
     document.getElementById("share-btn").onclick = async () => {
       const enc = btoa(unescape(encodeURIComponent(editor.getValue())));
       const url = location.origin + location.pathname + "?code=" + enc;
@@ -176,4 +206,49 @@ function renderPlayground() {
   }
 
   paint();
+}
+
+// Floating dropdown for the Improve button.
+function showImproveMenu(btn, code, editor) {
+  document.querySelectorAll(".improve-menu").forEach(n => n.remove());
+  const r = btn.getBoundingClientRect();
+  const menu = document.createElement("div");
+  menu.className = "improve-menu";
+  menu.style.cssText = `
+    position: fixed; z-index: 200;
+    left: ${r.left}px; top: ${r.bottom + 4}px;
+    background: var(--bg-elev); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 4px; min-width: 200px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  `;
+  const items = [
+    ["pythonic",    "Make it more Pythonic"],
+    ["performance", "Optimize performance"],
+    ["dedupe",      "Reduce repetition"],
+    ["readable",    "Improve readability"],
+    ["comments",    "Add inline comments"],
+    ["refactor",    "Refactor structure"],
+  ];
+  menu.innerHTML = items.map(([k, l]) => `
+    <div data-kind="${k}" style="padding:6px 10px;font-size:12.5px;cursor:pointer;border-radius:3px;">${l}</div>
+  `).join("");
+  menu.querySelectorAll("[data-kind]").forEach(d => {
+    d.onmouseenter = () => d.style.background = "var(--bg-hover)";
+    d.onmouseleave = () => d.style.background = "";
+    d.onclick = () => {
+      const kind = d.dataset.kind;
+      menu.remove();
+      AIPanel.open({ title: `Improve · ${d.textContent}`, subtitle: "refactor" });
+      AIPanel.body().innerHTML = "";
+      AIPanel.userTurn(d.textContent);
+      AIPanel.ask(PROMPTS.improve({ code, kind }));
+    };
+  });
+  document.body.appendChild(menu);
+  setTimeout(() => {
+    document.addEventListener("click", function close() {
+      menu.remove();
+      document.removeEventListener("click", close);
+    });
+  }, 0);
 }

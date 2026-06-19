@@ -54,7 +54,10 @@ function renderChallenges() {
             <div class="h1">Practice challenges</div>
             <div class="subtle">${list.length} of ${CHALLENGES.length} shown · ${Object.keys(State.data.completedChallenges).length} solved</div>
           </div>
-          <input id="ch-search" placeholder="Filter…" style="width:220px;" value="${escapeHTML(state.query)}" />
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="ai-btn" id="gen-ch">Generate AI challenge</button>
+            <input id="ch-search" placeholder="Filter…" style="width:220px;" value="${escapeHTML(state.query)}" />
+          </div>
         </div>
 
         <div class="ch-grid" style="margin-top:18px;">
@@ -82,6 +85,88 @@ function renderChallenges() {
 
     const search = document.getElementById("ch-search");
     if (search) search.oninput = e => { state.query = e.target.value; paint(); search.focus(); };
+    document.getElementById("gen-ch").onclick = openChallengeGenerator;
   }
   paint();
+}
+
+function openChallengeGenerator() {
+  if (!AI.available()) { State.toast("Configure a Groq key in Settings first.", "bad"); return; }
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" style="padding:18px;">
+      <div style="font-weight:600;color:var(--fg-strong);margin-bottom:10px;">Generate AI challenge</div>
+      <div style="display:grid;gap:10px;">
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Topic / theme</div>
+          <input id="g-topic" placeholder="e.g. dictionaries, recursion, string manipulation" style="width:100%;" />
+        </label>
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Difficulty</div>
+          <select id="g-diff" style="width:100%;">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn" id="g-cancel">Cancel</button>
+        <span style="flex:1;"></span>
+        <button class="btn primary" id="g-go">Generate</button>
+      </div>
+      <div id="g-status" style="margin-top:10px;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  modal.querySelector("#g-cancel").onclick = () => modal.remove();
+  modal.querySelector("#g-go").onclick = async () => {
+    const topic = modal.querySelector("#g-topic").value || "any";
+    const diff = modal.querySelector("#g-diff").value;
+    const status = modal.querySelector("#g-status");
+    status.innerHTML = `<div class="subtle">Generating…</div>`;
+    try {
+      const seenTitles = CHALLENGES.map(c => c.title);
+      const data = await AI.json(PROMPTS.challengeGen({ topic, difficulty: diff, avoidTitles: seenTitles.slice(0, 30) }), { temperature: 0.7, maxTokens: 1800 });
+      const ch = {
+        id: "ai-" + Date.now(),
+        title: data.title,
+        summary: data.summary,
+        description: data.description,
+        difficulty: data.difficulty || diff,
+        xp: diff === "hard" ? 30 : diff === "medium" ? 20 : 10,
+        tags: ["ai", ...(data.concepts || [])].slice(0, 5),
+        starter: data.starter || "",
+        hints: data.hints || [],
+        solution: data.solution || "",
+        check: buildCheckFromTests(data.tests || []),
+        _ai: true,
+      };
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem("pylab.aiChallenges") || "[]"); } catch {}
+      saved.unshift(ch);
+      saved = saved.slice(0, 50);
+      localStorage.setItem("pylab.aiChallenges", JSON.stringify(saved));
+      CHALLENGES.push(ch);
+      modal.remove();
+      location.href = `challenge.html?id=${ch.id}`;
+    } catch (e) {
+      status.innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
+    }
+  };
+}
+
+function buildCheckFromTests(tests) {
+  if (!Array.isArray(tests) || !tests.length) return `print("CHECK_OK")`;
+  const lines = [];
+  for (const t of tests) {
+    if (t.kind === "func_call") {
+      const expected = JSON.stringify(t.equals);
+      lines.push(`assert (${t.call}) == ${expected}, "Failed: ${t.call} -> expected " + repr(${expected})`);
+    }
+  }
+  lines.push(`print("CHECK_OK")`);
+  return lines.join("\n");
 }

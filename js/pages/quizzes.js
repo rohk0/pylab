@@ -21,9 +21,15 @@ function renderQuizzes() {
   main.innerHTML = `
     <div class="tabs"><div class="tab active">Quizzes</div></div>
     <div class="page-wide">
-      <div class="h1">Quizzes</div>
-      <div class="subtle" style="margin-bottom:18px;">Short topic checks. Mix of multiple choice, fill in the blank, predict-the-output, and debug-the-code.</div>
-      <div class="ch-grid">
+      <div style="display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div>
+          <div class="h1">Quizzes</div>
+          <div class="subtle" style="margin-bottom:8px;">Short topic checks. MCQ, fill-in-the-blank, predict-output, debug-the-code.</div>
+        </div>
+        <button class="ai-btn" id="gen-quiz">Generate AI quiz</button>
+      </div>
+
+      <div class="ch-grid" style="margin-top:14px;">
         ${QUIZZES.map(q => {
           const result = State.data.completedQuizzes[q.id];
           return `
@@ -37,9 +43,112 @@ function renderQuizzes() {
             </a>
           `;
         }).join("")}
+        ${listGeneratedQuizzes()}
       </div>
     </div>
   `;
+  document.getElementById("gen-quiz").onclick = openQuizGenerator;
+}
+
+function listGeneratedQuizzes() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem("pylab.aiQuizzes") || "[]"); } catch {}
+  return saved.map(q => `
+    <a class="ch-card" href="quizzes.html?id=${q.id}" style="text-decoration:none;color:inherit;">
+      <div class="title">
+        <span class="ai-badge" style="margin-right:6px;">AI</span>
+        ${escapeHTML(q.title)}
+      </div>
+      <div class="desc">${escapeHTML(q.description || "AI-generated quiz")}</div>
+      <div class="meta">
+        <span class="tag">${q.questions.length} questions</span>
+        <span class="tag">${escapeHTML(q.difficulty || "")}</span>
+      </div>
+    </a>
+  `).join("");
+}
+
+function openQuizGenerator() {
+  if (!AI.available()) { State.toast("Configure a Groq key in Settings first.", "bad"); return; }
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" style="padding:18px;">
+      <div style="font-weight:600;color:var(--fg-strong);margin-bottom:10px;">Generate AI quiz</div>
+      <div style="display:grid;gap:10px;">
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Topic</div>
+          <select id="g-topic" style="width:100%;">
+            <option>Variables</option>
+            <option>Loops</option>
+            <option>Functions</option>
+            <option>Lists</option>
+            <option>Dictionaries</option>
+            <option>Strings</option>
+            <option>Sets and Tuples</option>
+            <option>OOP / Classes</option>
+            <option>File handling</option>
+            <option>Exceptions</option>
+            <option>Comprehensions</option>
+            <option>Mixed</option>
+          </select>
+        </label>
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Difficulty</div>
+          <select id="g-diff" style="width:100%;">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Number of questions</div>
+          <select id="g-count" style="width:100%;">
+            <option>3</option><option selected>5</option><option>7</option><option>10</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn" id="g-cancel">Cancel</button>
+        <span style="flex:1;"></span>
+        <button class="btn primary" id="g-go">Generate</button>
+      </div>
+      <div id="g-status" style="margin-top:10px;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  modal.querySelector("#g-cancel").onclick = () => modal.remove();
+  modal.querySelector("#g-go").onclick = async () => {
+    const topic = modal.querySelector("#g-topic").value;
+    const diff = modal.querySelector("#g-diff").value;
+    const count = parseInt(modal.querySelector("#g-count").value, 10);
+    const status = modal.querySelector("#g-status");
+    status.innerHTML = `<div class="subtle">Generating…</div>`;
+    try {
+      const data = await AI.json(PROMPTS.quizGen({ topic, difficulty: diff, count }), { temperature: 0.6, maxTokens: 2000 });
+      const questions = Array.isArray(data.questions) ? data.questions : [];
+      if (!questions.length) throw new Error("AI returned no questions.");
+      const quiz = {
+        id: "ai-" + Date.now(),
+        title: `${topic} · ${diff}`,
+        description: `${count} AI-generated questions on ${topic.toLowerCase()}.`,
+        difficulty: diff,
+        questions,
+      };
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem("pylab.aiQuizzes") || "[]"); } catch {}
+      saved.unshift(quiz);
+      saved = saved.slice(0, 20);
+      localStorage.setItem("pylab.aiQuizzes", JSON.stringify(saved));
+      // Register in QUIZZES too so the runner finds it
+      QUIZZES.push(quiz);
+      modal.remove();
+      location.href = `quizzes.html?id=${quiz.id}`;
+    } catch (e) {
+      status.innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
+    }
+  };
 }
 
 function runQuiz(id) {

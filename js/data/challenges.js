@@ -279,4 +279,10 @@ print("CHECK_OK")`,
   },
 ];
 
+// Merge in AI-generated challenges saved to localStorage.
+try {
+  const ai = JSON.parse(localStorage.getItem("pylab.aiChallenges") || "[]");
+  if (Array.isArray(ai)) for (const c of ai) if (!CHALLENGES.find(x => x.id === c.id)) CHALLENGES.push(c);
+} catch {}
+
 window.findChallenge = id => CHALLENGES.find(c => c.id === id);

@@ -6,11 +6,19 @@ function renderSettings() {
 
   sidebar.innerHTML = `
     <div class="sb-header">Settings</div>
-    <a class="sb-item active" href="#appearance">Appearance</a>
+    <a class="sb-item" href="#ai">AI · Groq</a>
+    <a class="sb-item" href="#appearance">Appearance</a>
     <a class="sb-item" href="#editor">Editor</a>
     <a class="sb-item" href="#data">Data</a>
     <a class="sb-item" href="#about">About</a>
   `;
+  const target = location.hash.slice(1);
+  if (target) {
+    const match = sidebar.querySelector(`[href="#${target}"]`);
+    if (match) match.classList.add("active");
+  } else {
+    sidebar.querySelector('[href="#ai"]').classList.add("active");
+  }
 
   const s = State.data.settings;
   const stats = {
@@ -21,11 +29,52 @@ function renderSettings() {
     files: State.data.playgroundFiles.length,
   };
 
+  const aiKey = localStorage.getItem("pylab.ai.apiKey") || "";
+  const aiModel = localStorage.getItem("pylab.ai.model") || "";
+  const usingDefault = !aiKey && !!PYLAB_CONFIG.GROQ_API_KEY;
+  const status = AI.available()
+    ? (usingDefault ? `<span class="ai-badge">Default key</span>` : `<span class="ai-badge">Custom key</span>`)
+    : `<span class="tag red">Not configured</span>`;
+
   main.innerHTML = `
     <div class="tabs"><div class="tab active">Settings</div></div>
     <div class="page-narrow">
-      <section id="appearance">
-        <div class="h1">Appearance</div>
+      <section id="ai">
+        <div class="h1">AI · Groq <span style="margin-left:8px;">${status}</span></div>
+        <div class="card">
+          <div class="subtle" style="margin-bottom:8px;">
+            All AI features (coach, debugger, review, generation) run through Groq. Your key stays on this machine.
+            ${PYLAB_CONFIG.GROQ_API_KEY ? `A default key is bundled with the site — providing your own is recommended for security and quota.` : ""}
+          </div>
+          <label style="display:block;margin-top:10px;">
+            <div class="subtle" style="margin-bottom:4px;">Your Groq API key</div>
+            <input id="ai-key" type="password" autocomplete="off" placeholder="gsk_…" value="${escapeHTML(aiKey)}" style="width:100%;font-family:var(--font-mono);" />
+            <div class="subtle" style="margin-top:4px;font-size:11px;">
+              Get one at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>. Stored only in your browser.
+            </div>
+          </label>
+          <label style="display:block;margin-top:10px;">
+            <div class="subtle" style="margin-bottom:4px;">Model override (optional)</div>
+            <select id="ai-model" style="width:100%;">
+              <option value="">Default (${PYLAB_CONFIG.GROQ_MODELS.smart})</option>
+              <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (smart)</option>
+              <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fast)</option>
+              <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout-17b</option>
+              <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick-17b</option>
+            </select>
+          </label>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn primary" id="ai-save">Save</button>
+            <button class="btn" id="ai-test">Test connection</button>
+            <button class="btn danger" id="ai-clear">Clear key</button>
+            <span style="flex:1;"></span>
+            <a class="btn" href="chat.html">Open AI Tutor →</a>
+          </div>
+          <div id="ai-status" style="margin-top:10px;"></div>
+        </div>
+      </section>
+
+      <section id="appearance-wrap" style="margin-top:18px;">
         <div class="card">
           <label style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
             <div>
@@ -96,6 +145,40 @@ function renderSettings() {
       </section>
     </div>
   `;
+
+  // AI key
+  const setStatus = (html, kind="ok") => {
+    document.getElementById("ai-status").innerHTML = `<div class="feedback ${kind}">${html}</div>`;
+  };
+  document.getElementById("ai-model").value = aiModel;
+  document.getElementById("ai-save").onclick = () => {
+    const k = document.getElementById("ai-key").value.trim();
+    const m = document.getElementById("ai-model").value;
+    if (k) localStorage.setItem("pylab.ai.apiKey", k);
+    else localStorage.removeItem("pylab.ai.apiKey");
+    if (m) localStorage.setItem("pylab.ai.model", m);
+    else localStorage.removeItem("pylab.ai.model");
+    setStatus("Saved. Refresh other tabs to pick up the new key.", "ok");
+    State.toast("AI settings saved");
+  };
+  document.getElementById("ai-clear").onclick = () => {
+    if (!confirm("Clear your saved Groq key from this browser?")) return;
+    localStorage.removeItem("pylab.ai.apiKey");
+    document.getElementById("ai-key").value = "";
+    setStatus("Custom key cleared.", "info");
+  };
+  document.getElementById("ai-test").onclick = async () => {
+    setStatus("Pinging Groq…", "info");
+    try {
+      const t = await AI.complete([
+        { role: "system", content: "Reply with exactly the word 'pong'." },
+        { role: "user", content: "ping" }
+      ], { maxTokens: 6, speed: "fast" });
+      setStatus(`Connected. Model replied: <code>${escapeHTML(t.trim())}</code>`, "ok");
+    } catch (e) {
+      setStatus(`Failed: ${escapeHTML(AI.friendlyError(e))}`, "bad");
+    }
+  };
 
   document.getElementById("theme").onchange = e => {
     s.theme = e.target.value;

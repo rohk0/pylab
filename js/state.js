@@ -61,10 +61,28 @@
     },
     addXP(amount, reason = "") {
       this.data.xp += amount;
+      const before = this.data.level;
       while (this.data.xp >= this.xpForLevel(this.data.level + 1)) this.data.level++;
       this.touchStreak();
       this.save();
-      this.toast(`+${amount} XP ${reason ? "· " + reason : ""}`);
+      this.popXP(amount);
+      // Live-update the XP pill if it's on the page.
+      const pill = document.getElementById("xp-num");
+      if (pill) pill.textContent = `${this.data.xp} XP`;
+      if (this.data.level > before) this.toast(`Level up! → Lv ${this.data.level}`);
+      else this.toast(`+${amount} XP ${reason ? "· " + reason : ""}`);
+    },
+    popXP(amount) {
+      // Float a "+N XP" near the pill.
+      const pill = document.getElementById("xp-pill");
+      const rect = pill?.getBoundingClientRect();
+      const el = document.createElement("div");
+      el.className = "xp-pop";
+      el.textContent = `+${amount} XP`;
+      el.style.left = (rect ? rect.left - 10 : window.innerWidth - 100) + "px";
+      el.style.top  = (rect ? rect.top  - 14 : 36) + "px";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1300);
     },
     touchStreak() {
       const today = this.todayISO();

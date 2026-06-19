@@ -29,15 +29,20 @@ function renderProjects() {
   main.innerHTML = `
     <div class="tabs"><div class="tab active">Projects</div></div>
     <div class="page-wide">
-      <div class="h1">Guided projects</div>
-      <div class="subtle" style="margin-bottom:18px;">Small, complete builds. Each opens with steps on the left and an editor on the right.</div>
+      <div style="display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div>
+          <div class="h1">Guided projects</div>
+          <div class="subtle" style="margin-bottom:8px;">Small, complete builds. Each opens with steps on the left and an editor on the right.</div>
+        </div>
+        <button class="ai-btn" id="gen-proj">Generate AI project</button>
+      </div>
 
-      <div class="ch-grid">
+      <div class="ch-grid" style="margin-top:14px;">
         ${PROJECTS.map(p => {
           const dClass = p.difficulty === "easy" ? "green" : p.difficulty === "medium" ? "yellow" : "red";
           return `
             <a class="ch-card" href="#${p.id}" data-id="${p.id}" style="text-decoration:none;color:inherit;">
-              <div class="title">${escapeHTML(p.title)}</div>
+              <div class="title">${p._ai ? `<span class="ai-badge" style="margin-right:6px;">AI</span>` : ""}${escapeHTML(p.title)}</div>
               <div class="desc">${escapeHTML(p.summary)}</div>
               <div class="meta">
                 <span class="tag ${dClass}">${p.difficulty}</span>
@@ -50,6 +55,7 @@ function renderProjects() {
       </div>
     </div>
   `;
+  document.getElementById("gen-proj").onclick = openProjectGenerator;
 
   main.querySelectorAll("[data-id]").forEach(el => el.onclick = () => {
     location.hash = el.dataset.id;
@@ -150,4 +156,69 @@ function renderOneProject(p) {
     await Runtime.run(editor.getValue(), p.stdin || "");
     if (output.children.length === 0) output.innerHTML = `<span class="dim">(no output)</span>`;
   }
+}
+
+function openProjectGenerator() {
+  if (!AI.available()) { State.toast("Configure a Groq key in Settings first.", "bad"); return; }
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" style="padding:18px;">
+      <div style="font-weight:600;color:var(--fg-strong);margin-bottom:10px;">Generate AI project</div>
+      <div style="display:grid;gap:10px;">
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">What do you want to build?</div>
+          <input id="g-idea" placeholder="e.g. snake game, budget tracker, weather CLI" style="width:100%;" />
+        </label>
+        <label>
+          <div class="subtle" style="margin-bottom:4px;">Difficulty</div>
+          <select id="g-diff" style="width:100%;">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+        <div class="subtle" style="font-size:11px;">Suggestions: Snake game · Password manager · Quiz app · Budget tracker · Text RPG · Weather CLI · Calendar reminder</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn" id="g-cancel">Cancel</button>
+        <span style="flex:1;"></span>
+        <button class="btn primary" id="g-go">Generate</button>
+      </div>
+      <div id="g-status" style="margin-top:10px;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  modal.querySelector("#g-cancel").onclick = () => modal.remove();
+  modal.querySelector("#g-go").onclick = async () => {
+    const idea = modal.querySelector("#g-idea").value || "a creative beginner-friendly project";
+    const diff = modal.querySelector("#g-diff").value;
+    const status = modal.querySelector("#g-status");
+    status.innerHTML = `<div class="subtle">Generating project brief…</div>`;
+    try {
+      const data = await AI.json(PROMPTS.projectGen({ idea, difficulty: diff }), { temperature: 0.7, maxTokens: 2000 });
+      const proj = {
+        id: "ai-" + Date.now(),
+        title: data.title,
+        summary: data.summary,
+        difficulty: data.difficulty || diff,
+        minutes: data.minutes || 30,
+        steps: (data.milestones || []).map(m => ({ title: m.title || m.goal || "Step", body: m.body || m.goal || "" })),
+        starter: data.starter || "",
+        _ai: true,
+      };
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem("pylab.aiProjects") || "[]"); } catch {}
+      saved.unshift(proj);
+      saved = saved.slice(0, 30);
+      localStorage.setItem("pylab.aiProjects", JSON.stringify(saved));
+      PROJECTS.unshift(proj);
+      modal.remove();
+      location.hash = proj.id;
+      renderProjects();
+    } catch (e) {
+      status.innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
+    }
+  };
 }

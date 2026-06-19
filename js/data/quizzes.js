@@ -72,4 +72,10 @@ print("CHECK_OK")`,
   },
 ];
 
+// Merge in AI-generated quizzes saved to localStorage.
+try {
+  const ai = JSON.parse(localStorage.getItem("pylab.aiQuizzes") || "[]");
+  if (Array.isArray(ai)) for (const q of ai) if (!QUIZZES.find(x => x.id === q.id)) QUIZZES.push(q);
+} catch {}
+
 window.findQuiz = id => QUIZZES.find(q => q.id === id);
