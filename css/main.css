@@ -934,3 +934,186 @@ input:focus, textarea:focus, select:focus {
   .notes-layout, .ref-grid { grid-template-columns: 1fr; }
   .notes-list, .ref-nav { max-height: 30vh; }
 }
+
+/* ============================================================
+   CodeBlock — GitHub / VS Code Dark+ styled code blocks used in
+   lesson markdown, AI responses, the error dictionary, and the
+   reference page. Replaces the previous plain <pre> styling.
+   ============================================================ */
+
+.code-block {
+  margin: 14px 0;
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 6px;
+  background: #1e1e1e; /* VS Code Dark+ editor bg */
+  font-family: var(--font-mono);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+/* --- title bar (file name / language + copy button) ----------- */
+.cb-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #2d2d2d; /* VS Code tab strip */
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 11.5px;
+  color: #cccccc;
+}
+.cb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3c3c3c;
+  display: inline-block;
+}
+.cb-dot:nth-child(1) { background: #ff5f56; }
+.cb-dot:nth-child(2) { background: #ffbd2e; }
+.cb-dot:nth-child(3) { background: #27c93f; }
+.cb-title {
+  margin-left: 6px;
+  color: #d4d4d4;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2px;
+  text-transform: lowercase;
+}
+.cb-spacer { flex: 1; }
+
+.cb-copy {
+  border: 1px solid #3c3c3c;
+  background: transparent;
+  color: #cccccc;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, border-color 0.12s, background 0.12s;
+}
+.code-block:hover .cb-copy,
+.cb-copy:focus { opacity: 1; }
+.cb-copy:hover { border-color: var(--accent-2, #5eb1ff); background: rgba(94, 177, 255, 0.08); }
+.cb-copy.ok { border-color: var(--green, #2eb872); color: var(--green, #2eb872); opacity: 1; }
+.cb-copy-label { user-select: none; }
+
+/* --- body: gutter + code ------------------------------------- */
+.cb-body {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.cb-gutter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 10px 8px 10px 12px;
+  user-select: none;
+  color: #6e7681; /* GitHub gutter color */
+  background: #1e1e1e;
+  border-right: 1px solid #2a2a2a;
+  font-variant-numeric: tabular-nums;
+}
+.cb-gutter span {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.6;
+  min-width: 18px;
+  text-align: right;
+  opacity: 0.55;
+}
+.cb-pre {
+  margin: 0;
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  white-space: pre;
+}
+.cb-code {
+  font-family: var(--font-mono);
+  color: #d4d4d4; /* VS Code default text */
+  background: transparent;
+  padding: 0;
+}
+
+/* --- VS Code Dark+ syntax palette ---------------------------- */
+.code-block .syn-kw,
+.code-block .kw  { color: #c586c0; }              /* control keywords */
+.code-block .syn-str,
+.code-block .str { color: #ce9178; }              /* strings */
+.code-block .syn-num,
+.code-block .num { color: #b5cea8; }              /* numbers */
+.code-block .syn-com,
+.code-block .com { color: #6a9955; font-style: italic; } /* comments */
+.code-block .syn-fn,
+.code-block .fn  { color: #dcdcaa; }              /* function names */
+.code-block .syn-cls,
+.code-block .cls { color: #4ec9b0; }              /* class names / types */
+.code-block .syn-bi,
+.code-block .bi  { color: #569cd6; }              /* built-ins */
+.code-block .syn-op,
+.code-block .op  { color: #d4d4d4; }              /* operators */
+
+/* --- Override legacy <pre>/<code> styling in prose ---------- */
+.lesson-prose .code-block { margin: 16px 0; }
+.lesson-prose pre:not(.cb-pre) {
+  /* Anywhere a raw <pre> still exists, give it a similar feel. */
+  background: #1e1e1e;
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: #d4d4d4;
+}
+
+/* AI panel code blocks reuse the same component */
+.ai-content .code-block { margin: 10px 0; font-size: 12px; }
+.ai-content .cb-body { font-size: 12px; }
+.ai-content .cb-head { padding: 5px 9px; font-size: 11px; }
+
+/* Light theme — soften the dark for high-contrast modes */
+@media (prefers-color-scheme: light) {
+  body.theme-light .code-block { background: #f6f8fa; border-color: #d0d7de; }
+  body.theme-light .cb-head { background: #eaeef2; border-bottom-color: #d0d7de; color: #57606a; }
+  body.theme-light .cb-title { color: #1f2328; }
+  body.theme-light .cb-copy { color: #57606a; border-color: #d0d7de; }
+  body.theme-light .cb-code { color: #1f2328; }
+  body.theme-light .cb-gutter { background: #f6f8fa; color: #6e7781; border-right-color: #d0d7de; }
+  body.theme-light .code-block .syn-kw  { color: #cf222e; }
+  body.theme-light .code-block .syn-str { color: #0a3069; }
+  body.theme-light .code-block .syn-num { color: #0550ae; }
+  body.theme-light .code-block .syn-com { color: #6e7781; }
+  body.theme-light .code-block .syn-fn  { color: #8250df; }
+  body.theme-light .code-block .syn-cls { color: #953800; }
+  body.theme-light .code-block .syn-bi  { color: #116329; }
+}
+
+/* Make inline `code` chips visually distinct from blocks */
+.lesson-prose code:not(.cb-code),
+.ai-content   code:not(.cb-code) {
+  background: rgba(110, 118, 129, 0.14);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+  color: var(--accent, #b08bff);
+  font-family: var(--font-mono);
+}
+
+/* Mobile: hide gutter under 540px so code stays readable */
+@media (max-width: 540px) {
+  .cb-gutter { display: none; }
+  .cb-pre { padding: 10px 12px; }
+}

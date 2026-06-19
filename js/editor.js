@@ -118,10 +118,18 @@ function CodeEditor(container, initial = "", opts = {}) {
   const ta = container.querySelector("textarea");
   ta.value = initial;
 
+  // Use the language registry's highlighter when CodeBlock is available
+  // (loaded on every page). Falls back to Python.
+  const langId = opts.lang || (typeof activeLanguage === "function" ? activeLanguage().id : "python");
+  function paintCode(src) {
+    if (typeof CodeBlock !== "undefined") return CodeBlock.paint(src, langId);
+    return highlightPython(src);
+  }
+
   function refresh() {
     const lines = ta.value.split("\n");
     gutter.innerHTML = lines.map((_, i) => `<div>${i + 1}</div>`).join("");
-    highlight.innerHTML = highlightPython(ta.value) + "\n"; // trailing newline so last line is visible
+    highlight.innerHTML = paintCode(ta.value) + "\n";
     if (opts.onChange) opts.onChange(ta.value);
   }
 

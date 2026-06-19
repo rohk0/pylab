@@ -9,11 +9,9 @@
 // ============================================================
 
 window.PYLAB_CONFIG = {
-  // Default Groq API key. Users provide their own via Settings → AI · Groq.
-  // GitHub rejects pushed secrets, so this stays empty in the repo.
-  // To enable AI for everyone on your live site, paste your key here BEFORE
-  // making the repo public — or accept that AI features only work for users
-  // who configure their own key in Settings.
+  // Default Groq API key. GitHub's secret scanner rejects pushes
+  // containing API keys, so this stays empty in the repo. Users add
+  // their own at Settings → AI · Groq (stored only in localStorage).
   GROQ_API_KEY: "",
 
   GROQ_ENDPOINT: "https://api.groq.com/openai/v1/chat/completions",

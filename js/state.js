@@ -17,7 +17,8 @@
     notes: [],               // {id, title, body, updated}
     flashFavs: {},           // id -> true
     flashReview: {},         // id -> {next, ease}
-    playgroundFiles: [],     // {id, name, code, updated}
+    lang: "python",          // active language: python|javascript|java|cpp|c|sql|html|css|typescript
+    playgroundFiles: [],     // {id, name, code, updated, lang}
     settings: {
       theme: "dark",
       fontSize: 13,

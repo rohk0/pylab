@@ -126,7 +126,8 @@ function renderChat() {
     stream.scrollTop = stream.scrollHeight;
 
     const ctx = Tracker.summaryString();
-    const learnerContext = `Recent activity:\n${ctx}`;
+    const lang = (typeof activeLanguage === "function") ? activeLanguage() : null;
+    const learnerContext = `${lang ? `Active language: ${lang.name}\n\n` : ""}Recent activity:\n${ctx}`;
     const target = document.getElementById("ai-pending-content");
     try {
       const text = await AI.into(target, PROMPTS.chat({

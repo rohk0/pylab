@@ -3,6 +3,13 @@
 function renderLessonPage() {
   const params = new URLSearchParams(location.search);
   const id = params.get("id") || ALL_LESSONS[0].id;
+  const langParam = params.get("lang");
+
+  // Multi-language path — when ?lang=<non-python> is set, dispatch to AI lesson renderer.
+  if (langParam && langParam !== "python") {
+    return renderAILessonPage(langParam, id);
+  }
+
   const lesson = findLesson(id);
   const { prev, next } = lessonNeighbors(id);
   const unit = LESSONS.find(u => u.lessons.some(l => l.id === id));
@@ -297,11 +304,16 @@ function labelFor(m) {
 
 // ----- Tiny markdown renderer (subset) -----
 function renderMarkdown(src) {
-  // Code blocks first
+  // Code blocks first — render through the unified CodeBlock component
+  // when it's available. Falls back to a plain <pre> for safety.
   const blocks = [];
   src = src.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    blocks.push(`<pre><code>${highlightPython(code.trim())}</code></pre>`);
-    return ` ${blocks.length - 1} `;
+    const trimmed = code.replace(/^\n+|\n+$/g, "");
+    const html = (typeof CodeBlock !== "undefined")
+      ? CodeBlock.render(trimmed, { lang: lang || "python" })
+      : `<pre><code>${(typeof highlightPython === "function" ? highlightPython(trimmed) : trimmed)}</code></pre>`;
+    blocks.push(html);
+    return `${blocks.length - 1}`;
   });
 
   const lines = src.split("\n");
@@ -336,7 +348,7 @@ function renderMarkdown(src) {
     }
   }
   flushList(); flushBQ();
-  html = html.replace(/ (\d+) /g, (_, i) => blocks[+i]);
+  html = html.replace(/(\d+)/g, (_, i) => blocks[+i]);
   return html;
 }
 
@@ -346,4 +358,219 @@ function inline(text) {
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/\*([^*]+)\*/g, "<i>$1</i>")
     .replace(/&lt;kbd&gt;([^&]+)&lt;\/kbd&gt;/g, '<kbd class="kbd">$1</kbd>');
+}
+
+// ============================================================
+// AI lesson renderer — for non-Python languages.
+// Reads the cached curriculum, lazy-generates lesson body on first
+// open, presents prose-left / editor-right layout. Auto-grading is
+// done via AI verification since we can't run Java/C/SQL natively.
+// ============================================================
+
+async function renderAILessonPage(langId, lessonId) {
+  const lang = findLanguage(langId);
+  const sidebar = document.getElementById("sidebar");
+  const main = document.getElementById("main");
+
+  let units = null;
+  try { units = JSON.parse(localStorage.getItem("pylab.curriculum." + langId) || "null"); } catch {}
+  if (!units) {
+    main.innerHTML = `
+      <div class="tabs"><div class="tab active">${lang.name} lesson</div></div>
+      <div class="page-narrow">
+        <div class="h1">No ${lang.name} curriculum yet</div>
+        <div class="subtle" style="margin-bottom:14px;">Generate one first.</div>
+        <a class="btn primary" href="lessons.html">← Back to Lessons</a>
+      </div>
+    `;
+    return;
+  }
+
+  let unit = null, lessonMeta = null, prev = null, next = null;
+  const flat = [];
+  for (const u of units) for (const l of (u.lessons || [])) {
+    flat.push({ unit: u, lesson: l });
+    if (l.id === lessonId) { unit = u; lessonMeta = l; }
+  }
+  const idx = flat.findIndex(x => x.lesson.id === lessonId);
+  if (idx > 0) prev = flat[idx - 1].lesson;
+  if (idx >= 0 && idx < flat.length - 1) next = flat[idx + 1].lesson;
+  if (!lessonMeta) {
+    main.innerHTML = `<div class="page-narrow"><div class="h1">Lesson not found</div><a class="btn" href="lessons.html">← Lessons</a></div>`;
+    return;
+  }
+
+  sidebar.innerHTML = `
+    <div class="sb-header">${escapeHTML(unit.title)}</div>
+    ${(unit.lessons || []).map(l => `
+      <a class="sb-item ${l.id === lessonId ? "active" : ""} ${State.data.completedLessons[l.id] ? "done" : ""}"
+         href="lesson.html?lang=${langId}&id=${encodeURIComponent(l.id)}">
+        <span>${escapeHTML(l.title)}</span>
+      </a>
+    `).join("")}
+    <div class="sb-section"></div>
+    <a class="sb-item" href="lessons.html">← All ${lang.name} lessons</a>
+  `;
+
+  const CACHE = `pylab.lesson.${langId}.${lessonId}`;
+  let body = null;
+  try { body = JSON.parse(localStorage.getItem(CACHE) || "null"); } catch {}
+  if (!body) body = await generateAILessonBody(lang, unit, lessonMeta, CACHE);
+  if (!body) return;
+
+  paintAILesson(lang, unit, lessonMeta, body, prev, next);
+}
+
+async function generateAILessonBody(lang, unit, lessonMeta, cacheKey) {
+  const main = document.getElementById("main");
+  main.innerHTML = `
+    <div class="tabs"><div class="tab active">${escapeHTML(lessonMeta.title)}</div></div>
+    <div class="page-narrow">
+      <div class="h1">Generating lesson…</div>
+      <div class="subtle">First open for this lesson. The tutor is authoring prose and exercises.</div>
+      <div style="margin-top:24px;text-align:center;"><div class="ai-dot" style="width:24px;height:24px;margin:0 auto;"></div></div>
+      <div id="gen-error" style="margin-top:12px;"></div>
+    </div>
+  `;
+  if (!AI.available()) {
+    document.getElementById("gen-error").innerHTML = `<div class="feedback bad">No Groq key configured. Add one in <a href="settings.html#ai">Settings</a>.</div>`;
+    return null;
+  }
+  const sys = `You write programming lessons as strict JSON. Return ONLY JSON.\n\nSchema:\n{\n  "prose": "markdown lesson body, 3-6 short paragraphs with at least one code example. Use fenced ${lang.id} code blocks.",\n  "exercise": {\n    "prompt": "one-paragraph task statement",\n    "starter": "starter code in ${lang.name}",\n    "hints": ["hint 1", "hint 2", "hint 3"],\n    "solution": "full reference solution",\n    "tests": "human-readable rubric of what a correct solution must demonstrate"\n  }\n}\n\nFocus this lesson tightly on the topic.`;
+  try {
+    const data = await AI.json([
+      { role: "system", content: sys },
+      { role: "user", content: `Language: ${lang.name}\nUnit: ${unit.title} — ${unit.summary || ""}\nLesson: ${lessonMeta.title} — ${lessonMeta.summary || ""}\nTopics: ${(lessonMeta.topics || []).join(", ")}` }
+    ], { maxTokens: 2200, temperature: 0.5 });
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    document.getElementById("gen-error").innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
+    return null;
+  }
+}
+
+function paintAILesson(lang, unit, lessonMeta, body, prev, next) {
+  const main = document.getElementById("main");
+  const ex = body.exercise || {};
+  main.innerHTML = `
+    <div class="tabs">
+      <div class="tab active">${escapeHTML(lessonMeta.title)}.${lang.ext}</div>
+    </div>
+    <div class="lesson-layout">
+      <article class="lesson-prose">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <a href="lessons.html" class="subtle">← All lessons</a>
+          <span class="ai-badge">AI</span>
+          <span class="tag">${lang.name}</span>
+        </div>
+        <h1>${escapeHTML(lessonMeta.title)}</h1>
+        <div id="prose"></div>
+      </article>
+      <section class="lesson-exercise">
+        <div class="exercise-prompt">
+          <div class="label">Exercise</div>
+          <div class="task">${escapeHTML(ex.prompt || "Write your code and click Check.")}</div>
+        </div>
+        <div class="editor-wrap">
+          <div class="editor-toolbar">
+            <span class="file">${escapeHTML(lessonMeta.id)}.${lang.ext}</span>
+            <span class="spacer"></span>
+            <span>${escapeHTML(lang.name)}</span>
+          </div>
+          <div id="editor" style="flex:1;"></div>
+          <div class="output-pane" style="height:240px;">
+            <div class="output-tabs">
+              <div class="otab active">Output</div>
+              <div class="spacer"></div>
+              <div class="actions">
+                <button class="ai-btn" id="ai-coach">Ask AI</button>
+                <button class="btn ghost" id="hint-btn">Hint</button>
+                <button class="btn ghost" id="solution-btn">Solution</button>
+              </div>
+            </div>
+            <div class="output-body" id="output"><span class="dim">Run or check to see results.</span></div>
+          </div>
+          <div class="exercise-controls">
+            <button class="btn" id="reset-btn">Reset</button>
+            <button class="btn" id="run-btn">▶ Run</button>
+            <button class="btn primary" id="check-btn">Check (AI)</button>
+            <span class="spacer"></span>
+            ${prev ? `<a class="btn" href="lesson.html?lang=${lang.id}&id=${encodeURIComponent(prev.id)}">← Prev</a>` : ""}
+            ${next ? `<a class="btn primary" href="lesson.html?lang=${lang.id}&id=${encodeURIComponent(next.id)}">Next →</a>` : ""}
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  document.getElementById("prose").innerHTML = renderMarkdown(body.prose || "");
+
+  const editor = CodeEditor(document.getElementById("editor"), ex.starter || "", { onRun: doRun });
+  const out = document.getElementById("output");
+  Runtime.bindOutput(out);
+  let hintIdx = -1;
+
+  document.getElementById("reset-btn").onclick = () => editor.setValue(ex.starter || "");
+  document.getElementById("run-btn").onclick = doRun;
+  document.getElementById("hint-btn").onclick = () => {
+    hintIdx = Math.min((ex.hints || []).length - 1, hintIdx + 1);
+    out.innerHTML = `<div class="feedback hint"><b>Hint ${hintIdx + 1}:</b> ${escapeHTML((ex.hints || [])[hintIdx] || "No more hints.")}</div>`;
+  };
+  document.getElementById("solution-btn").onclick = () => {
+    if (!confirm("Reveal solution? Try first for the learning effect.")) return;
+    editor.setValue(ex.solution || "// no solution");
+  };
+  document.getElementById("ai-coach").onclick = () => openCoach(
+    { id: lessonMeta.id, title: lessonMeta.title, prose: body.prose },
+    { prompt: ex.prompt, solution: ex.solution },
+    editor
+  );
+  document.getElementById("check-btn").onclick = doCheck;
+
+  async function doRun() {
+    out.innerHTML = "";
+    await Runtime.runFor(editor.getValue(), lang.id);
+    if (out.children.length === 0) out.innerHTML = `<span class="dim">(no output)</span>`;
+  }
+  async function doCheck() {
+    if (!AI.available()) {
+      out.innerHTML = `<div class="feedback bad">AI verification needs a Groq key.</div>`;
+      return;
+    }
+    out.innerHTML = `<span class="dim">Grading with AI…</span>`;
+    try {
+      const verdict = await AI.json([
+        { role: "system", content: `You are a strict code grader for ${lang.name}. Reply ONLY with JSON: {"pass": <bool>, "summary": "<one-line>", "notes": "<2-4 sentence feedback>"}.` },
+        { role: "user", content: `Exercise: ${ex.prompt}\n\nMust demonstrate:\n${ex.tests || "(judge by the prompt)"}\n\nSubmitted ${lang.name}:\n${editor.getValue()}` }
+      ], { maxTokens: 400, temperature: 0.2 });
+      out.innerHTML = "";
+      const ok = !!verdict?.pass;
+      const fb = document.createElement("div");
+      fb.className = "feedback " + (ok ? "ok" : "bad");
+      fb.innerHTML = `<b>${ok ? "✓" : "✗"} ${escapeHTML(verdict?.summary || "")}</b><div style="margin-top:6px;">${escapeHTML(verdict?.notes || "")}</div>`;
+      out.appendChild(fb);
+      Tracker.recordAttempt({
+        id: `lesson:${lang.id}:${lessonMeta.id}`,
+        topic: lessonMeta.topics || [unit.title],
+        ok,
+        kind: "lesson",
+        ref: lessonMeta.id,
+      });
+      if (ok) {
+        const wasNew = State.completeLesson(lessonMeta.id, 15);
+        if (wasNew) {
+          const extra = document.createElement("div");
+          extra.className = "feedback ok"; extra.style.marginTop = "6px";
+          extra.innerHTML = `🎉 Lesson complete · <b>+15 XP</b>`;
+          out.appendChild(extra);
+        }
+        appendAIActionRow(out, "ok", { code: editor.getValue(), ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose } });
+      } else {
+        appendAIActionRow(out, "bad", { code: editor.getValue(), ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose }, error: verdict?.notes || "", stdout: "" });
+      }
+    } catch (e) {
+      out.innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
+    }
+  }
 }

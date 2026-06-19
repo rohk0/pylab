@@ -5,10 +5,12 @@ function renderPlayground() {
   const main = document.getElementById("main");
 
   if (!State.data.playgroundFiles.length) {
+    const lang = (typeof activeLanguage === "function") ? activeLanguage() : { id: "python", ext: "py", starter: '# Welcome\n\nfor i in range(5):\n    print("hi", i)\n' };
     State.data.playgroundFiles.push({
       id: "f-" + Date.now(),
-      name: "scratch.py",
-      code: '# Welcome to the Pylab playground.\n# Press Ctrl-Enter to run.\n\nfor i in range(5):\n    print("hi", i)\n',
+      name: "scratch." + lang.ext,
+      code: lang.starter,
+      lang: lang.id,
       updated: Date.now(),
     });
     State.save();
@@ -45,7 +47,14 @@ function renderPlayground() {
 
     sidebar.querySelector("#new-file").onclick = () => {
       const id = "f-" + Date.now();
-      State.data.playgroundFiles.push({ id, name: `untitled-${State.data.playgroundFiles.length}.py`, code: "", updated: Date.now() });
+      const lang = activeLanguage();
+      State.data.playgroundFiles.push({
+        id,
+        name: `untitled-${State.data.playgroundFiles.length}.${lang.ext}`,
+        code: "",
+        lang: lang.id,
+        updated: Date.now(),
+      });
       activeId = id;
       State.save();
       paint();
@@ -83,12 +92,15 @@ function renderPlayground() {
       <div class="editor-wrap" style="flex:1;">
         <div class="editor-toolbar">
           <input id="fname" value="${escapeHTML(active.name)}" style="background:transparent;border:0;padding:2px 6px;font-family:var(--font-mono);font-size:11.5px;width:200px;" />
+          <select id="lang-picker" title="Language" style="background:var(--bg-elev);border:1px solid var(--border);color:var(--fg-strong);font-family:var(--font-mono);font-size:11.5px;padding:2px 4px;border-radius:3px;">
+            ${LANGUAGES.map(L => `<option value="${L.id}" ${(active.lang || "python") === L.id ? "selected" : ""}>${L.name}</option>`).join("")}
+          </select>
           <span class="spacer"></span>
           <button class="ai-btn" id="ai-explain">Explain</button>
           <button class="ai-btn" id="ai-improve">Improve ▾</button>
           <button class="btn ghost" id="copy-btn" title="Copy code">Copy</button>
           <button class="btn ghost" id="share-btn" title="Copy share URL">Share</button>
-          <span>Python 3.11</span>
+          <span id="rt-label">${escapeHTML(findLanguage(active.lang || "python").name)}</span>
         </div>
         <div id="editor" style="flex:1;"></div>
         <div class="output-pane" style="height:240px;">
@@ -116,6 +128,7 @@ function renderPlayground() {
     `;
 
     const editor = CodeEditor(document.getElementById("editor"), active.code, {
+      lang: active.lang || "python",
       onChange: code => {
         active.code = code; active.updated = Date.now();
         State.save();
@@ -128,11 +141,24 @@ function renderPlayground() {
     Runtime.bindOutput(out);
 
     document.getElementById("fname").oninput = e => {
-      let v = e.target.value.trim() || "untitled.py";
-      if (!v.endsWith(".py")) v += ".py";
+      let v = e.target.value.trim() || "untitled";
+      const langDef = findLanguage(active.lang || "python");
+      const ext = "." + langDef.ext;
+      if (!v.endsWith(ext)) v = v.replace(/\.[a-z0-9]+$/i, "") + ext;
       active.name = v; State.save();
-      // light refresh of tabs
       document.querySelectorAll(`.tab[data-tab="${active.id}"] span`).forEach(s => s.textContent = v);
+    };
+    document.getElementById("lang-picker").onchange = e => {
+      const id = e.target.value;
+      active.lang = id;
+      const langDef = findLanguage(id);
+      // Update extension on filename
+      const base = active.name.replace(/\.[a-z0-9]+$/i, "");
+      active.name = base + "." + langDef.ext;
+      // If editor is empty, drop in starter
+      if (!editor.getValue().trim()) editor.setValue(langDef.starter);
+      State.save();
+      paint();
     };
     document.getElementById("copy-btn").onclick = async () => {
       await navigator.clipboard.writeText(editor.getValue());
@@ -187,7 +213,24 @@ function renderPlayground() {
 
     async function doRun() {
       out.innerHTML = "";
-      await Runtime.run(editor.getValue(), stdin);
+      const langId = active.lang || "python";
+      // If running HTML or CSS, look for a sibling file of the other type
+      // and merge so previews include both.
+      const langDef = findLanguage(langId);
+      const opts = { stdin };
+      if (langDef.runner === "iframe") {
+        const html = langId === "html"
+          ? editor.getValue()
+          : (State.data.playgroundFiles.find(f => (f.lang || "python") === "html") || {}).code || "";
+        const css = (() => {
+          if (langId === "css") return editor.getValue();
+          const cssFile = State.data.playgroundFiles.find(f => (f.lang || "python") === "css");
+          return cssFile?.code || "";
+        })();
+        opts.html = html || editor.getValue();
+        opts.css = css;
+      }
+      await Runtime.runFor(editor.getValue(), langId, opts);
       if (out.children.length === 0) out.innerHTML = `<span class="dim">(program ended with no output)</span>`;
     }
   }

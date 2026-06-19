@@ -207,9 +207,11 @@ const AI = (() => {
     const blocks = [];
     const MARK = "";
     src = src.replace(/```(\w*)\n?([\s\S]*?)(?:```|$)/g, (_, lang, code) => {
-      const html = (lang === "" || /^py|python/i.test(lang))
-        ? `<pre class="ai-code"><code>${highlightPython(code.replace(/\n$/, ""))}</code></pre>`
-        : `<pre class="ai-code"><code>${escapeHTML(code.replace(/\n$/, ""))}</code></pre>`;
+      const trimmed = code.replace(/\n$/, "");
+      const langKey = (lang || "python").toLowerCase();
+      const html = (typeof CodeBlock !== "undefined")
+        ? CodeBlock.render(trimmed, { lang: langKey })
+        : `<pre class="ai-code"><code>${escapeHTML(trimmed)}</code></pre>`;
       blocks.push(html);
       return MARK + (blocks.length - 1) + MARK;
     });

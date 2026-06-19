@@ -55,6 +55,11 @@ function buildShell(activeId) {
           <kbd>Ctrl K</kbd>
         </button>
         <div class="user">
+          ${typeof LANGUAGES !== "undefined" ? `
+            <select id="tb-lang" title="Active language" style="background:var(--bg-elev);border:1px solid var(--border);color:var(--fg-strong);font-family:var(--font-mono);font-size:11px;padding:2px 6px;border-radius:3px;">
+              ${LANGUAGES.map(L => `<option value="${L.id}" ${activeLanguage().id === L.id ? "selected" : ""}>${L.name}</option>`).join("")}
+            </select>
+          ` : ""}
           <a href="settings.html#ai" class="ai-badge" title="AI status">
             <span style="width:6px;height:6px;border-radius:50%;background:${aiReady ? "var(--green)" : "var(--fg-mute)"};display:inline-block;"></span>
             ${aiReady ? "AI on" : "AI off"}
@@ -110,6 +115,12 @@ function buildShell(activeId) {
   };
 
   document.getElementById("cmd-open").onclick = openCommandPalette;
+  const tbLang = document.getElementById("tb-lang");
+  if (tbLang) tbLang.onchange = e => {
+    setActiveLanguage(e.target.value);
+    // Trigger a soft reload of the current page to pick up the new lang context.
+    location.reload();
+  };
 
   document.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
