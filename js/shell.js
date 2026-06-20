@@ -241,9 +241,20 @@ function buildShell(activeId) {
 
   // Repaint the titlebar user area when auth changes (e.g. sign in/out
   // in another tab — storage event — or by direct dispatch).
-  window.addEventListener("pylab:auth-change", () => location.reload());
+  // Only reload on actual auth-state transitions (signed in <-> signed out).
+  // Firebase fires pylab:auth-change on every page load to confirm the
+  // persisted user; without the guard below that was an infinite loop.
+  const _initialAuthed = !!(typeof Auth !== "undefined" && Auth.current());
+  window.addEventListener("pylab:auth-change", (e) => {
+    const nowAuthed = !!e.detail;
+    if (nowAuthed === _initialAuthed) return;
+    location.reload();
+  });
   window.addEventListener("storage", e => {
-    if (e.key === "pylab.auth.v1") location.reload();
+    if (e.key !== "pylab.auth.v1") return;
+    const nowAuthed = !!(e.newValue && JSON.parse(e.newValue));
+    if (nowAuthed === _initialAuthed) return;
+    location.reload();
   });
 
   // First-run onboarding (once per browser)
