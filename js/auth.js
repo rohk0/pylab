@@ -322,9 +322,12 @@ const SignInModal = (() => {
     }
     document.addEventListener("keydown", onKey);
 
-    // Google
+    // Google. With Firebase enabled, onAuthStateChanged will fire and the
+    // shell's guarded handler will reload (after the 2s page-load window
+    // has elapsed). For the GIS fallback, the .then() resolves to a
+    // profile which we close + reload on manually.
     Auth.renderGoogleButton(document.getElementById("signin-google"), { width: 300 })
-      .then(profile => { if (profile) { close(); location.reload(); } });
+      .then(profile => { if (profile) { close(); setTimeout(() => location.reload(), 50); } });
 
     // Sign in / Sign up tab toggle
     const form = document.getElementById("signin-email-form");
@@ -357,9 +360,9 @@ const SignInModal = (() => {
         const mode = form.dataset.mode || "signin";
         if (mode === "signup") await Auth.signUpEmail({ email, password, name });
         else                   await Auth.signInEmail({ email, password });
-        // Firebase auth observer reloads via pylab:auth-change in shell.
         close();
-        location.reload();
+        // Defer reload past the 2s page-load guard so it can't loop.
+        setTimeout(() => location.reload(), 50);
       } catch (ex) {
         submit.disabled = false;
         err.innerHTML = `<div class="feedback bad" style="margin-top:8px;">${ex.message}</div>`;
