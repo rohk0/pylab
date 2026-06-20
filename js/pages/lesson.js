@@ -54,8 +54,8 @@ function renderLessonPage() {
           <div class="exercise-prompt">
             <div class="label">
               Exercise ${exerciseIdx + 1} of ${totalEx}
-              ${isAIVariant ? `<span class="ai-badge" style="margin-left:6px;">AI variant</span>
-                <a href="#" id="restore-original" class="subtle" style="margin-left:8px;font-size:11px;">↺ original</a>` : ""}
+              ${isAIVariant ? `<span class="ai-badge" style="margin-left:6px;">fresh</span>` : ""}
+              <a href="#" id="reroll-q" class="subtle" style="margin-left:8px;font-size:11px;" title="Generate another fresh exercise">↻ new</a>
             </div>
             <div class="task">${escapeHTML(ex.prompt)}</div>
           </div>
@@ -72,7 +72,6 @@ function renderLessonPage() {
                 <div class="spacer"></div>
                 <div class="actions">
                   <button class="ai-btn" id="ai-coach">Ask AI</button>
-                  <button class="ai-btn" id="ai-new-q" title="Generate a fresh exercise on the same topic">🎲 New question</button>
                   <button class="btn ghost" id="hint-btn">Hint</button>
                   <button class="btn ghost" id="solution-btn">Solution</button>
                 </div>
@@ -126,27 +125,29 @@ function renderLessonPage() {
       editor.setValue(ex.solution || "# (no solution provided)");
     };
     document.getElementById("ai-coach").onclick = () => openCoach(lesson, ex, editor);
-    const restoreLink = document.getElementById("restore-original");
-    if (restoreLink) restoreLink.onclick = (e) => {
+    const reroll = document.getElementById("reroll-q");
+    if (reroll) reroll.onclick = (e) => {
       e.preventDefault();
       delete exOverrides[exerciseIdx];
       paint();
-      State.toast("Restored original exercise");
     };
-    document.getElementById("ai-new-q").onclick = async () => {
-      if (!AI.available()) { State.toast("Configure a Groq key in Settings first.", "bad"); return; }
-      const btn = document.getElementById("ai-new-q");
-      const orig = btn.innerHTML;
-      btn.disabled = true; btn.innerHTML = "Generating…";
+
+    // Auto-generate a fresh AI exercise on the very first visit to this
+    // exercise index. After it's generated once it sticks until the user
+    // clicks "↻ new" or navigates to a different exercise.
+    if (!isAIVariant && AI.available() && !lesson._noAI) {
+      autoFreshExercise();
+    }
+    async function autoFreshExercise() {
+      const promptEl = document.querySelector(".exercise-prompt .task");
+      if (promptEl) promptEl.innerHTML = `<span class="subtle">Generating a fresh question…</span>`;
       const fresh = await generateExerciseVariant(lesson, ex, exHistory);
-      btn.disabled = false; btn.innerHTML = orig;
-      if (!fresh) return;
+      if (!fresh) return; // grader keeps the original on failure
       exHistory.push(fresh.prompt);
       if (exHistory.length > 6) exHistory.shift();
       exOverrides[exerciseIdx] = fresh;
       paint();
-      State.toast("Fresh exercise generated");
-    };
+    }
     if (document.getElementById("prev-ex")) document.getElementById("prev-ex").onclick = () => { exerciseIdx--; paint(); };
     if (document.getElementById("next-ex")) document.getElementById("next-ex").onclick = () => { exerciseIdx++; paint(); };
 
