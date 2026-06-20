@@ -44,4 +44,17 @@ window.PYLAB_CONFIG = {
   //     (e.g. https://rohk0.github.io and http://localhost:8000)
   // Leave empty to disable the Google button; email sign-in still works.
   GOOGLE_CLIENT_ID: "680070481478-k28g6l8rlr18e9ldbnvqcanq22v9uir9.apps.googleusercontent.com",
+
+  // Firebase project config. Safe to expose publicly — security is
+  // enforced by Firestore rules, not by hiding these values.
+  // When this is non-empty, sign-in uses real Firebase Auth and
+  // progress syncs to /users/{uid} in Firestore.
+  FIREBASE_CONFIG: {
+    apiKey: "AIzaSyB9zCP61I6gkZGjYJYhBOpwFg1HMxKy8sA",
+    authDomain: "pylab-75cab.firebaseapp.com",
+    projectId: "pylab-75cab",
+    storageBucket: "pylab-75cab.firebasestorage.app",
+    messagingSenderId: "436746461605",
+    appId: "1:436746461605:web:e4cd19b46a90386e0f884c",
+  },
 };

@@ -36,21 +36,71 @@ const Auth = (() => {
   }
 
   function signOut() {
-    localStorage.removeItem(KEY);
-    // Also clear Google's stored prompt state so the next sign-in is interactive.
+    // Firebase will clear its own auth state and emit pylab:auth-change.
+    if (window.Firebase?.enabled) {
+      window.Firebase.signOut().catch(() => {});
+    } else {
+      localStorage.removeItem(KEY);
+      window.dispatchEvent(new CustomEvent("pylab:auth-change", { detail: null }));
+    }
     try { window.google?.accounts?.id?.disableAutoSelect(); } catch {}
-    window.dispatchEvent(new CustomEvent("pylab:auth-change", { detail: null }));
   }
 
-  // ----- Email profile (no real auth) -----
-  function signInWithEmail({ email, name }) {
+  // ----- Email/password — real Firebase auth when available -----
+  async function signUpEmail({ email, password, name }) {
     if (!email) throw new Error("Email required.");
+    if (window.Firebase?.enabled) {
+      if (!password || password.length < 6) throw new Error("Password must be at least 6 characters.");
+      try {
+        const profile = await window.Firebase.signUpEmail({ email, password, name });
+        return profile;
+      } catch (e) { throw friendlyFirebaseError(e); }
+    }
+    // Fallback: no Firebase → keep the old local profile path.
     setProfile({
       provider: "email",
       email: String(email).trim().toLowerCase(),
       name: (name || email.split("@")[0]).trim(),
       picture: null,
     });
+  }
+  async function signInEmail({ email, password }) {
+    if (!email) throw new Error("Email required.");
+    if (window.Firebase?.enabled) {
+      if (!password) throw new Error("Password required.");
+      try {
+        const profile = await window.Firebase.signInEmail({ email, password });
+        return profile;
+      } catch (e) { throw friendlyFirebaseError(e); }
+    }
+    // Fallback: local profile (no password verification).
+    setProfile({
+      provider: "email",
+      email: String(email).trim().toLowerCase(),
+      name: email.split("@")[0],
+      picture: null,
+    });
+  }
+  // Legacy entry point kept for any old callers.
+  function signInWithEmail({ email, name }) {
+    return signUpEmail({ email, password: null, name });
+  }
+
+  function friendlyFirebaseError(e) {
+    const code = e?.code || "";
+    const map = {
+      "auth/email-already-in-use":  "An account already exists for that email. Try signing in.",
+      "auth/invalid-email":         "That email address doesn't look right.",
+      "auth/weak-password":         "Password must be at least 6 characters.",
+      "auth/user-not-found":        "No account with that email. Sign up instead?",
+      "auth/wrong-password":        "Wrong password.",
+      "auth/invalid-credential":    "Wrong email or password.",
+      "auth/too-many-requests":     "Too many attempts. Wait a minute and retry.",
+      "auth/popup-closed-by-user":  "Sign-in popup was closed.",
+      "auth/network-request-failed":"Network issue — check your connection.",
+    };
+    const msg = map[code] || (e?.message || "Sign-in failed.");
+    return new Error(msg);
   }
 
   // ----- Google Sign-In (GIS) -----
@@ -87,8 +137,34 @@ const Auth = (() => {
   }
 
   // Render the official Google Sign-In button into a container.
-  // Resolves with the saved profile on successful sign-in.
+  // When Firebase is enabled, the button goes through Firebase's
+  // signInWithPopup so the single click also unlocks Firestore.
   async function renderGoogleButton(container, opts = {}) {
+    if (window.Firebase?.enabled) {
+      container.innerHTML = `
+        <button type="button" class="btn primary signin-google-fb" style="width:100%;justify-content:center;padding:9px;font-size:13px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right:8px;vertical-align:middle;">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+      `;
+      container.querySelector(".signin-google-fb").onclick = async () => {
+        try {
+          await window.Firebase.signInWithGoogle();
+          // onAuthStateChanged emits pylab:auth-change and the host
+          // (modal / login page) reacts.
+        } catch (e) {
+          const err = friendlyFirebaseError(e);
+          container.insertAdjacentHTML("beforeend",
+            `<div class="feedback bad" style="margin-top:8px;">${err.message}</div>`);
+        }
+      };
+      return null;
+    }
     const clientId = googleClientId();
     if (!clientId) {
       container.innerHTML = `
@@ -156,7 +232,7 @@ const Auth = (() => {
 
   return {
     current, isAuthed, signOut, setProfile,
-    signInWithEmail,
+    signInWithEmail, signUpEmail, signInEmail,
     renderGoogleButton, googleClientId,
     avatarHTML,
   };
@@ -207,16 +283,24 @@ const SignInModal = (() => {
 
         <div class="signin-divider"><span>or</span></div>
 
-        <form id="signin-email-form" class="signin-section" novalidate>
+        <form id="signin-email-form" class="signin-section" novalidate data-mode="signin">
+          <div class="signin-tabs">
+            <button type="button" class="signin-tab active" data-tab="signin">Sign in</button>
+            <button type="button" class="signin-tab" data-tab="signup">Sign up</button>
+          </div>
           <label class="signin-field">
             <span>Email</span>
             <input type="email" id="signin-email" required placeholder="you@example.com" autocomplete="email" />
           </label>
-          <label class="signin-field">
+          <label class="signin-field" id="signin-name-wrap" style="display:none;">
             <span>Display name <em>(optional)</em></span>
             <input type="text" id="signin-name" placeholder="What should we call you?" maxlength="40" autocomplete="nickname" />
           </label>
-          <button class="btn primary signin-submit" type="submit">Continue with email</button>
+          <label class="signin-field">
+            <span>Password</span>
+            <input type="password" id="signin-password" required placeholder="At least 6 characters" autocomplete="current-password" minlength="6" />
+          </label>
+          <button class="btn primary signin-submit" type="submit" id="signin-submit-btn">Sign in</button>
           <div id="signin-err"></div>
         </form>
 
@@ -242,21 +326,42 @@ const SignInModal = (() => {
     Auth.renderGoogleButton(document.getElementById("signin-google"), { width: 300 })
       .then(profile => { if (profile) { close(); location.reload(); } });
 
-    // Email
-    document.getElementById("signin-email-form").addEventListener("submit", (e) => {
+    // Sign in / Sign up tab toggle
+    const form = document.getElementById("signin-email-form");
+    const submit = document.getElementById("signin-submit-btn");
+    const nameWrap = document.getElementById("signin-name-wrap");
+    const pw = document.getElementById("signin-password");
+    form.querySelectorAll(".signin-tab").forEach(tab => tab.onclick = () => {
+      form.querySelectorAll(".signin-tab").forEach(t => t.classList.toggle("active", t === tab));
+      const mode = tab.dataset.tab;
+      form.dataset.mode = mode;
+      nameWrap.style.display = mode === "signup" ? "block" : "none";
+      submit.textContent = mode === "signup" ? "Create account" : "Sign in";
+      pw.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    });
+
+    // Submit
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("signin-email").value.trim();
-      const name  = document.getElementById("signin-name").value.trim();
-      const err   = document.getElementById("signin-err");
+      const password = document.getElementById("signin-password").value;
+      const name = document.getElementById("signin-name").value.trim();
+      const err = document.getElementById("signin-err");
+      err.innerHTML = "";
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         err.innerHTML = `<div class="feedback bad" style="margin-top:8px;">Enter a valid email address.</div>`;
         return;
       }
+      submit.disabled = true;
       try {
-        Auth.signInWithEmail({ email, name });
+        const mode = form.dataset.mode || "signin";
+        if (mode === "signup") await Auth.signUpEmail({ email, password, name });
+        else                   await Auth.signInEmail({ email, password });
+        // Firebase auth observer reloads via pylab:auth-change in shell.
         close();
         location.reload();
       } catch (ex) {
+        submit.disabled = false;
         err.innerHTML = `<div class="feedback bad" style="margin-top:8px;">${ex.message}</div>`;
       }
     });

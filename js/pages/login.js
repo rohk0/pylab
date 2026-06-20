@@ -90,21 +90,27 @@ function renderLogin() {
 
         <div class="card" style="padding:20px;">
           <div style="font-weight:600;color:var(--fg-strong);margin-bottom:10px;font-size:13px;">Continue with email</div>
-          <form id="email-form" autocomplete="off" novalidate>
+          <form id="email-form" autocomplete="off" novalidate data-mode="signin">
+            <div class="signin-tabs" style="margin-bottom:12px;">
+              <button type="button" class="signin-tab active" data-tab="signin">Sign in</button>
+              <button type="button" class="signin-tab" data-tab="signup">Sign up</button>
+            </div>
             <label style="display:block;margin-bottom:10px;">
               <div class="subtle" style="margin-bottom:4px;">Email</div>
-              <input type="email" id="email" required placeholder="you@example.com" style="width:100%;" />
+              <input type="email" id="email" required placeholder="you@example.com" style="width:100%;" autocomplete="email" />
+            </label>
+            <label style="display:block;margin-bottom:10px;" id="name-wrap" hidden>
+              <div class="subtle" style="margin-bottom:4px;">Display name <span style="color:var(--fg-mute);">(optional)</span></div>
+              <input type="text" id="name" placeholder="What should we call you?" style="width:100%;" maxlength="40" autocomplete="nickname" />
             </label>
             <label style="display:block;margin-bottom:10px;">
-              <div class="subtle" style="margin-bottom:4px;">Display name <span style="color:var(--fg-mute);">(optional)</span></div>
-              <input type="text" id="name" placeholder="What should we call you?" style="width:100%;" maxlength="40" />
+              <div class="subtle" style="margin-bottom:4px;">Password</div>
+              <input type="password" id="password" required placeholder="At least 6 characters" style="width:100%;" minlength="6" autocomplete="current-password" />
             </label>
-            <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Continue</button>
+            <button class="btn primary" type="submit" id="email-submit" style="width:100%;justify-content:center;">Sign in</button>
             <div id="email-err" style="margin-top:8px;"></div>
           </form>
-          <div style="font-size:11px;color:var(--fg-mute);margin-top:8px;">
-            No password, no email verification. This is a local profile that labels your progress on this device.
-          </div>
+          <div style="font-size:11px;color:var(--fg-mute);margin-top:8px;" id="email-hint"></div>
         </div>
 
         <div style="text-align:center;margin-top:18px;">
@@ -118,20 +124,45 @@ function renderLogin() {
       if (profile) location.href = next;
     });
 
+    // Sign in / Sign up tab toggle
+    const form = document.getElementById("email-form");
+    const submitBtn = document.getElementById("email-submit");
+    const nameWrap = document.getElementById("name-wrap");
+    const pwInput = document.getElementById("password");
+    const hint = document.getElementById("email-hint");
+    const useFirebase = !!window.Firebase?.enabled;
+    hint.innerHTML = useFirebase
+      ? "Real account — password is verified by Firebase. Progress will sync across all your devices."
+      : "Local profile only — no password is checked. Set up Firebase to enable real auth and cross-device sync.";
+    form.querySelectorAll(".signin-tab").forEach(tab => tab.onclick = () => {
+      form.querySelectorAll(".signin-tab").forEach(t => t.classList.toggle("active", t === tab));
+      const mode = tab.dataset.tab;
+      form.dataset.mode = mode;
+      nameWrap.hidden = mode !== "signup";
+      submitBtn.textContent = mode === "signup" ? "Create account" : "Sign in";
+      pwInput.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    });
+
     // Email form
-    document.getElementById("email-form").onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value.trim();
       const name  = document.getElementById("name").value.trim();
+      const password = pwInput.value;
       const err   = document.getElementById("email-err");
+      err.innerHTML = "";
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         err.innerHTML = `<div class="feedback bad">Enter a valid email address.</div>`;
         return;
       }
+      submitBtn.disabled = true;
       try {
-        Auth.signInWithEmail({ email, name });
+        const mode = form.dataset.mode || "signin";
+        if (mode === "signup") await Auth.signUpEmail({ email, password, name });
+        else                   await Auth.signInEmail({ email, password });
         location.href = next;
       } catch (ex) {
+        submitBtn.disabled = false;
         err.innerHTML = `<div class="feedback bad">${escapeHTML(ex.message)}</div>`;
       }
     };

@@ -39,7 +39,11 @@
     }
   }
 
-  function save() { localStorage.setItem(KEY, JSON.stringify(State.data)); }
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(State.data));
+    // Broadcast for Firebase sync (no-op when Firebase isn't loaded).
+    window.dispatchEvent(new CustomEvent("pylab:state-save", { detail: State.data }));
+  }
 
   const State = {
     data: load(),
@@ -166,4 +170,12 @@
   // Mark activity on every load
   State.touchStreak();
   save();
+
+  // React to Firestore-pushed state from another device / tab.
+  // Firebase emits this after it merges remote into localStorage.
+  window.addEventListener("pylab:state-sync", e => {
+    if (!e?.detail) return;
+    State.data = e.detail;
+    State.emit();
+  });
 })();
