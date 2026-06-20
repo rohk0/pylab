@@ -43,5 +43,5 @@ window.PYLAB_CONFIG = {
   //   - Authorized JavaScript origins: your deployed origin
   //     (e.g. https://rohk0.github.io and http://localhost:8000)
   // Leave empty to disable the Google button; email sign-in still works.
-  GOOGLE_CLIENT_ID: "",
+  GOOGLE_CLIENT_ID: "680070481478-k28g6l8rlr18e9ldbnvqcanq22v9uir9.apps.googleusercontent.com",
 };
