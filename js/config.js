@@ -44,16 +44,4 @@ window.PYLAB_CONFIG = {
   //     (e.g. https://rohk0.github.io and http://localhost:8000)
   // Leave empty to disable the Google button; email sign-in still works.
   GOOGLE_CLIENT_ID: "680070481478-k28g6l8rlr18e9ldbnvqcanq22v9uir9.apps.googleusercontent.com",
-
-  // Apple Sign-In requires a paid Apple Developer account.
-  //   1) developer.apple.com → Certificates, Identifiers & Profiles
-  //   2) Create an App ID, then a Services ID (this is the value below)
-  //   3) Add this site's origin and a Return URL to the Services ID
-  //   4) Verify domain ownership by hosting the file Apple provides at
-  //      /.well-known/apple-developer-domain-association.txt
-  //   5) Paste your Services ID below and set APPLE_REDIRECT_URI to
-  //      a page on your site that closes the popup (we use login.html).
-  // Leave APPLE_CLIENT_ID empty to hide the Apple button.
-  APPLE_CLIENT_ID: "",
-  APPLE_REDIRECT_URI: "", // e.g. "https://rohk0.github.io/pylab/login.html"
 };

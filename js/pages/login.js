@@ -84,14 +84,6 @@ function renderLogin() {
           </div>
         </div>
 
-        <div class="card" id="apple-card" style="padding:20px;margin-top:12px;">
-          <div style="font-weight:600;color:var(--fg-strong);margin-bottom:10px;font-size:13px;">Continue with Apple</div>
-          <div id="apple-btn"></div>
-          <div style="font-size:11px;color:var(--fg-mute);margin-top:8px;">
-            Apple won't share your email with the site if you choose Hide My Email.
-          </div>
-        </div>
-
         <div style="text-align:center;margin:18px 0;color:var(--fg-mute);font-size:11px;letter-spacing:1px;">
           OR
         </div>
@@ -125,13 +117,6 @@ function renderLogin() {
     Auth.renderGoogleButton(document.getElementById("google-btn")).then(profile => {
       if (profile) location.href = next;
     });
-
-    // Apple button — only render the card when configured.
-    if (Auth.appleClientId()) {
-      Auth.renderAppleButton(document.getElementById("apple-btn"));
-    } else {
-      document.getElementById("apple-card").remove();
-    }
 
     // Email form
     document.getElementById("email-form").onsubmit = (e) => {

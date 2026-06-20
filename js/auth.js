@@ -137,86 +137,6 @@ const Auth = (() => {
     });
   }
 
-  // ----- Apple Sign-In -----
-  // Loads Apple's JS SDK on demand and renders a styled button that
-  // initiates the OAuth popup. Apple returns a JWT; we decode its
-  // payload (sub + email) and save a profile. Like Google, signature
-  // verification needs a backend — this is identity-for-display only.
-  let _appleLoaded = null;
-  function loadApple() {
-    if (_appleLoaded) return _appleLoaded;
-    _appleLoaded = new Promise((resolve, reject) => {
-      if (window.AppleID?.auth) return resolve();
-      const s = document.createElement("script");
-      s.src = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
-      s.async = true; s.defer = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Couldn't reach Apple Sign-In."));
-      document.head.appendChild(s);
-    });
-    return _appleLoaded;
-  }
-
-  function appleClientId() { return (window.PYLAB_CONFIG && PYLAB_CONFIG.APPLE_CLIENT_ID) || ""; }
-  function appleRedirectURI() { return (window.PYLAB_CONFIG && PYLAB_CONFIG.APPLE_REDIRECT_URI) || location.origin + location.pathname; }
-
-  // Render an Apple Sign-In button into a container.
-  // Resolves to the profile on success, null otherwise.
-  async function renderAppleButton(container) {
-    if (!appleClientId()) {
-      container.innerHTML = `
-        <div class="feedback info" style="margin:0;">
-          <b>Apple Sign-In is not configured.</b> The site owner needs an Apple Developer account, a Services ID, and verified domain ownership. See <code>js/config.js</code>.
-        </div>
-      `;
-      return null;
-    }
-    // Render the styled button up-front so it's clickable even before
-    // Apple's script finishes loading.
-    container.innerHTML = `
-      <button type="button" class="apple-btn" id="apple-btn-click">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M16.365 1.43c0 1.14-.42 2.27-1.18 3.05-.75.78-1.95 1.36-3.05 1.27-.13-1.1.41-2.21 1.13-2.96.81-.85 2.13-1.45 3.1-1.36zM20.6 17.42c-.5 1.15-.74 1.66-1.39 2.68-.9 1.43-2.18 3.21-3.76 3.22-1.4.01-1.77-.92-3.67-.91-1.9.01-2.31.93-3.71.92-1.58-.02-2.79-1.61-3.7-3.04C1.27 16.6.66 11.84 2.85 9.07c1.45-1.84 3.73-2.91 5.88-2.91 2.17 0 3.55 1.18 5.34 1.18 1.74 0 2.8-1.18 5.31-1.18 1.9 0 3.92 1.03 5.36 2.82-4.71 2.58-3.94 9.32-3.94 9.32-.06.16-.13.24-.2.42z"/>
-        </svg>
-        <span>Continue with Apple</span>
-      </button>
-    `;
-    const btn = container.querySelector("#apple-btn-click");
-    btn.onclick = async () => {
-      btn.disabled = true;
-      try {
-        await loadApple();
-        window.AppleID.auth.init({
-          clientId: appleClientId(),
-          scope: "name email",
-          redirectURI: appleRedirectURI(),
-          state: "pylab-" + Date.now(),
-          usePopup: true,
-        });
-        const resp = await window.AppleID.auth.signIn();
-        const claims = decodeJWT(resp.authorization?.id_token);
-        if (!claims) throw new Error("Apple returned no user info.");
-        const fullName = resp.user?.name
-          ? [resp.user.name.firstName, resp.user.name.lastName].filter(Boolean).join(" ")
-          : null;
-        setProfile({
-          provider: "apple",
-          email: claims.email || (resp.user?.email ?? "apple-user"),
-          name: fullName || (claims.email?.split("@")[0]) || "Apple user",
-          picture: null,
-        });
-        location.reload();
-      } catch (e) {
-        // User cancelled or Apple errored — don't shout, just re-enable.
-        btn.disabled = false;
-        if (e?.error && e.error !== "popup_closed_by_user") {
-          container.innerHTML += `<div class="feedback bad" style="margin-top:8px;">Apple sign-in failed: ${e.error}</div>`;
-        }
-      }
-    };
-    return null;
-  }
-
   // Tiny avatar helper for the titlebar / menus.
   function avatarHTML(profile, size = 24) {
     const initial = (profile?.name || profile?.email || "?").charAt(0).toUpperCase();
@@ -238,7 +158,6 @@ const Auth = (() => {
     current, isAuthed, signOut, setProfile,
     signInWithEmail,
     renderGoogleButton, googleClientId,
-    renderAppleButton, appleClientId,
     avatarHTML,
   };
 })();
@@ -285,9 +204,6 @@ const SignInModal = (() => {
         <div class="signin-section">
           <div id="signin-google" style="min-height:44px;display:flex;align-items:center;justify-content:center;"></div>
         </div>
-        <div class="signin-section" style="margin-top:8px;">
-          <div id="signin-apple"></div>
-        </div>
 
         <div class="signin-divider"><span>or</span></div>
 
@@ -325,13 +241,6 @@ const SignInModal = (() => {
     // Google
     Auth.renderGoogleButton(document.getElementById("signin-google"), { width: 300 })
       .then(profile => { if (profile) { close(); location.reload(); } });
-
-    // Apple — render the styled button (it hides itself if not configured).
-    if (Auth.appleClientId()) {
-      Auth.renderAppleButton(document.getElementById("signin-apple"));
-    } else {
-      document.getElementById("signin-apple").remove();
-    }
 
     // Email
     document.getElementById("signin-email-form").addEventListener("submit", (e) => {
