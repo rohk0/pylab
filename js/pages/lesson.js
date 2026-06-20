@@ -35,9 +35,15 @@ function renderLessonPage() {
 
   let exerciseIdx = 0;
   const totalEx = lesson.exercises.length;
+  // Override map: { idx -> AI-generated exercise } so the user's "New question"
+  // picks stick across paint() re-renders within this session.
+  const exOverrides = {};
+  // Cap on history so memory stays modest.
+  const exHistory = []; // recent prompts to feed avoid-list back to AI
 
   function paint() {
-    const ex = lesson.exercises[exerciseIdx];
+    const ex = exOverrides[exerciseIdx] || lesson.exercises[exerciseIdx];
+    const isAIVariant = !!exOverrides[exerciseIdx];
     main.innerHTML = `
       <div class="tabs">
         <div class="tab active">${escapeHTML(lesson.title)}.py</div>
@@ -46,7 +52,11 @@ function renderLessonPage() {
         <article class="lesson-prose" id="prose"></article>
         <section class="lesson-exercise">
           <div class="exercise-prompt">
-            <div class="label">Exercise ${exerciseIdx + 1} of ${totalEx}</div>
+            <div class="label">
+              Exercise ${exerciseIdx + 1} of ${totalEx}
+              ${isAIVariant ? `<span class="ai-badge" style="margin-left:6px;">AI variant</span>
+                <a href="#" id="restore-original" class="subtle" style="margin-left:8px;font-size:11px;">↺ original</a>` : ""}
+            </div>
             <div class="task">${escapeHTML(ex.prompt)}</div>
           </div>
           <div class="editor-wrap">
@@ -62,6 +72,7 @@ function renderLessonPage() {
                 <div class="spacer"></div>
                 <div class="actions">
                   <button class="ai-btn" id="ai-coach">Ask AI</button>
+                  <button class="ai-btn" id="ai-new-q" title="Generate a fresh exercise on the same topic">🎲 New question</button>
                   <button class="btn ghost" id="hint-btn">Hint</button>
                   <button class="btn ghost" id="solution-btn">Solution</button>
                 </div>
@@ -115,6 +126,27 @@ function renderLessonPage() {
       editor.setValue(ex.solution || "# (no solution provided)");
     };
     document.getElementById("ai-coach").onclick = () => openCoach(lesson, ex, editor);
+    const restoreLink = document.getElementById("restore-original");
+    if (restoreLink) restoreLink.onclick = (e) => {
+      e.preventDefault();
+      delete exOverrides[exerciseIdx];
+      paint();
+      State.toast("Restored original exercise");
+    };
+    document.getElementById("ai-new-q").onclick = async () => {
+      if (!AI.available()) { State.toast("Configure a Groq key in Settings first.", "bad"); return; }
+      const btn = document.getElementById("ai-new-q");
+      const orig = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = "Generating…";
+      const fresh = await generateExerciseVariant(lesson, ex, exHistory);
+      btn.disabled = false; btn.innerHTML = orig;
+      if (!fresh) return;
+      exHistory.push(fresh.prompt);
+      if (exHistory.length > 6) exHistory.shift();
+      exOverrides[exerciseIdx] = fresh;
+      paint();
+      State.toast("Fresh exercise generated");
+    };
     if (document.getElementById("prev-ex")) document.getElementById("prev-ex").onclick = () => { exerciseIdx--; paint(); };
     if (document.getElementById("next-ex")) document.getElementById("next-ex").onclick = () => { exerciseIdx++; paint(); };
 
@@ -176,6 +208,51 @@ function renderLessonPage() {
 // ============================================================
 // AI integration — coaching, debug, review, explainer.
 // ============================================================
+
+// Generates a fresh exercise on the same topic as the given lesson/exercise.
+// Returns null on failure. The returned shape matches the hand-written
+// exercises so the existing Python grader handles it unchanged:
+//   { prompt, starter, check, hints, solution }
+async function generateExerciseVariant(lesson, baseEx, avoidPrompts = []) {
+  if (!AI.available()) return null;
+  try {
+    const topicHints = [
+      lesson.title,
+      ...(baseEx.tags || []),
+      ...(baseEx.concepts || []),
+    ].filter(Boolean).join(", ");
+    const avoid = (avoidPrompts || []).slice(-6).map((p, i) => `(${i + 1}) ${p}`).join("\n") || "(none yet)";
+    const sys = `You author a single fresh Python exercise on a given topic as strict JSON. Return ONLY JSON.
+
+Schema:
+{
+  "prompt": "one-paragraph task statement",
+  "starter": "Python starter code with a function or scaffold",
+  "check": "Python assertions ending with print('CHECK_OK')",
+  "hints": ["hint 1", "hint 2", "hint 3"],
+  "solution": "complete Python solution"
+}
+
+Rules:
+- The 'check' block runs AFTER the user's code in the same namespace. It must
+  consist of plain assert statements (and helper calls) followed by
+  print('CHECK_OK'). No imports unless strictly necessary.
+- 3 to 6 assertions covering normal and edge cases.
+- Stay tightly on-topic. Match the difficulty of the original exercise.
+- Avoid duplicating any of the prompts the user has already seen.
+- Use only Python 3 features. No I/O in the solution.`;
+    const user = `Topic: ${topicHints}\n\nOriginal exercise (for difficulty & shape only — don't repeat it):\n${baseEx.prompt || "(none)"}\n\nAlready-seen prompts to avoid:\n${avoid}\n\nGenerate a different exercise on the same topic.`;
+    const data = await AI.json([
+      { role: "system", content: sys },
+      { role: "user", content: user },
+    ], { maxTokens: 1400, temperature: 0.7 });
+    if (!data || !data.prompt || !data.check) throw new Error("AI returned incomplete exercise.");
+    return data;
+  } catch (e) {
+    State.toast(AI.friendlyError(e), "bad");
+    return null;
+  }
+}
 
 function guessErrorName(msg) {
   const m = String(msg || "").match(/\b([A-Z][a-zA-Z]+Error)\b/);
