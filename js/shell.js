@@ -236,6 +236,9 @@ function buildShell(activeId) {
 
   bindUserMenu();
 
+  // Auto-open the sign-in modal on first arrival per session.
+  if (typeof SignInModal !== "undefined") SignInModal.maybeAutoOpen();
+
   // Repaint the titlebar user area when auth changes (e.g. sign in/out
   // in another tab — storage event — or by direct dispatch).
   window.addEventListener("pylab:auth-change", () => location.reload());

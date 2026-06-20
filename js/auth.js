@@ -163,3 +163,116 @@ const Auth = (() => {
 })();
 
 window.Auth = Auth;
+
+// ============================================================
+// SignInModal — auto-pop sign-in dialog on first page visit.
+// X button + Esc + backdrop click dismiss for the session.
+// ============================================================
+
+const SignInModal = (() => {
+  const DISMISS_KEY = "pylab.signin.dismissed";
+
+  function dismissed() { return sessionStorage.getItem(DISMISS_KEY) === "1"; }
+  function dismiss()   { sessionStorage.setItem(DISMISS_KEY, "1"); }
+
+  function close() {
+    const root = document.getElementById("signin-modal");
+    if (!root) return;
+    root.classList.add("closing");
+    setTimeout(() => root.remove(), 180);
+  }
+
+  function open() {
+    if (document.getElementById("signin-modal")) return;
+    const root = document.createElement("div");
+    root.id = "signin-modal";
+    root.className = "signin-modal";
+    root.setAttribute("role", "dialog");
+    root.setAttribute("aria-modal", "true");
+    root.setAttribute("aria-labelledby", "signin-title");
+    root.innerHTML = `
+      <div class="signin-backdrop" data-close></div>
+      <div class="signin-dialog" role="document">
+        <button class="signin-close" type="button" aria-label="Close sign-in" data-close>×</button>
+        <div class="signin-brand">
+          <div class="signin-logo"></div>
+          <span><b>pylab</b></span>
+        </div>
+        <h2 id="signin-title" class="signin-title">Sign in to pylab</h2>
+        <p class="signin-sub">Personalize your experience — name, avatar, and a greeting. Skip if you'd rather stay anonymous.</p>
+
+        <div class="signin-section">
+          <div id="signin-google" style="min-height:44px;display:flex;align-items:center;justify-content:center;"></div>
+        </div>
+
+        <div class="signin-divider"><span>or</span></div>
+
+        <form id="signin-email-form" class="signin-section" novalidate>
+          <label class="signin-field">
+            <span>Email</span>
+            <input type="email" id="signin-email" required placeholder="you@example.com" autocomplete="email" />
+          </label>
+          <label class="signin-field">
+            <span>Display name <em>(optional)</em></span>
+            <input type="text" id="signin-name" placeholder="What should we call you?" maxlength="40" autocomplete="nickname" />
+          </label>
+          <button class="btn primary signin-submit" type="submit">Continue with email</button>
+          <div id="signin-err"></div>
+        </form>
+
+        <div class="signin-foot">
+          <a href="#" data-close>Skip for now</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(root);
+
+    // Close interactions
+    root.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", (e) => {
+      e.preventDefault();
+      dismiss();
+      close();
+    }));
+    function onKey(e) {
+      if (e.key === "Escape") { dismiss(); close(); document.removeEventListener("keydown", onKey); }
+    }
+    document.addEventListener("keydown", onKey);
+
+    // Google
+    Auth.renderGoogleButton(document.getElementById("signin-google"), { width: 300 })
+      .then(profile => { if (profile) { close(); location.reload(); } });
+
+    // Email
+    document.getElementById("signin-email-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("signin-email").value.trim();
+      const name  = document.getElementById("signin-name").value.trim();
+      const err   = document.getElementById("signin-err");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        err.innerHTML = `<div class="feedback bad" style="margin-top:8px;">Enter a valid email address.</div>`;
+        return;
+      }
+      try {
+        Auth.signInWithEmail({ email, name });
+        close();
+        location.reload();
+      } catch (ex) {
+        err.innerHTML = `<div class="feedback bad" style="margin-top:8px;">${ex.message}</div>`;
+      }
+    });
+
+    setTimeout(() => document.getElementById("signin-email")?.focus(), 100);
+  }
+
+  function maybeAutoOpen() {
+    if (Auth.isAuthed()) return;
+    if (dismissed()) return;
+    // Skip on the dedicated login page (modal would duplicate it).
+    if (/login\.html$/.test(location.pathname)) return;
+    setTimeout(open, 320);
+  }
+
+  return { open, close, maybeAutoOpen };
+})();
+
+window.SignInModal = SignInModal;
