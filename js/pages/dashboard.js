@@ -49,7 +49,12 @@ function renderDashboard() {
     <div class="page-wide">
       <div style="display:flex;justify-content:space-between;align-items:end;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div>
-          <div class="h1">Welcome back.</div>
+          <div class="h1">${(() => {
+            const me = (typeof Auth !== "undefined") ? Auth.current() : null;
+            if (!me) return "Welcome back.";
+            const first = (me.name || "").split(/\s+/)[0] || me.name;
+            return `Welcome back, ${escapeHTML(first)}.`;
+          })()}</div>
           <div class="subtle">Pick up where you left off, or grind a challenge.</div>
         </div>
         <div style="display:flex;gap:8px;">

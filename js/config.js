@@ -36,4 +36,12 @@ window.PYLAB_CONFIG = {
 
   // Soft client-side rate limit: max requests per minute per page.
   RATE_LIMIT_PER_MIN: 30,
+
+  // Google OAuth Client ID for "Sign in with Google".
+  // Create one at https://console.cloud.google.com/apis/credentials
+  //   - Type: "Web application"
+  //   - Authorized JavaScript origins: your deployed origin
+  //     (e.g. https://rohk0.github.io and http://localhost:8000)
+  // Leave empty to disable the Google button; email sign-in still works.
+  GOOGLE_CLIENT_ID: "",
 };

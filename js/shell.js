@@ -32,6 +32,73 @@ function iconNote()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="cu
 function iconChat()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a8 8 0 0 1-12 7l-5 1 1.3-4.4A8 8 0 1 1 21 12z"/><path d="M9 11h.01M13 11h.01M17 11h.01"/></svg>`; }
 function iconSpark()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M19 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>`; }
 function iconBug()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 8h8M8 8a4 4 0 1 1 8 0M9 8v8a3 3 0 0 0 6 0V8M5 12h3m8 0h3M5 16h3m8 0h3M5 8h3m8 0h3"/></svg>`; }
+
+function userTrigger() {
+  if (typeof Auth === "undefined") return "";
+  const me = Auth.current();
+  if (!me) {
+    return `<a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}" class="btn ghost" id="sign-in-btn" style="padding:2px 10px;font-size:11.5px;">Sign in</a>`;
+  }
+  return `
+    <button class="user-trigger" id="user-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu"
+      style="background:transparent;border:1px solid var(--border);padding:2px;border-radius:50%;cursor:pointer;display:flex;">
+      ${Auth.avatarHTML(me, 26)}
+    </button>
+  `;
+}
+
+function bindUserMenu() {
+  if (typeof Auth === "undefined") return;
+  const trigger = document.getElementById("user-trigger");
+  if (!trigger) return;
+  trigger.onclick = (e) => {
+    e.stopPropagation();
+    document.querySelectorAll(".user-menu").forEach(n => n.remove());
+    const me = Auth.current();
+    const r = trigger.getBoundingClientRect();
+    const menu = document.createElement("div");
+    menu.className = "user-menu";
+    menu.setAttribute("role", "menu");
+    menu.style.cssText = `
+      position:fixed; z-index:200;
+      right:${window.innerWidth - r.right}px; top:${r.bottom + 6}px;
+      background:var(--bg-elev); border:1px solid var(--border-strong);
+      border-radius:6px; min-width:240px; padding:4px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    `;
+    menu.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);">
+        ${Auth.avatarHTML(me, 36)}
+        <div style="min-width:0;flex:1;">
+          <div style="color:var(--fg-strong);font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(me.name)}</div>
+          <div style="color:var(--fg-dim);font-size:11px;font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(me.email)}</div>
+        </div>
+      </div>
+      <a href="login.html" class="user-menu-item" role="menuitem">Account</a>
+      <a href="settings.html" class="user-menu-item" role="menuitem">Settings</a>
+      <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+      <button class="user-menu-item" role="menuitem" id="um-signout"
+        style="width:100%;text-align:left;background:transparent;border:0;color:var(--red);font:inherit;cursor:pointer;">Sign out</button>
+    `;
+    document.body.appendChild(menu);
+    trigger.setAttribute("aria-expanded", "true");
+    menu.querySelectorAll(".user-menu-item").forEach(it => {
+      it.style.cssText += "display:block;padding:8px 12px;color:var(--fg);text-decoration:none;font-size:12.5px;border-radius:4px;";
+      it.onmouseenter = () => it.style.background = "var(--bg-hover)";
+      it.onmouseleave = () => it.style.background = "";
+    });
+    document.getElementById("um-signout").onclick = () => {
+      menu.remove();
+      if (confirm("Sign out of this browser?")) { Auth.signOut(); location.reload(); }
+    };
+    function close() {
+      menu.remove();
+      trigger.setAttribute("aria-expanded", "false");
+      document.removeEventListener("click", close);
+    }
+    setTimeout(() => document.addEventListener("click", close), 0);
+  };
+}
 function iconSettings(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`; }
 function iconTheme()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`; }
 
@@ -78,6 +145,7 @@ function buildShell(activeId) {
           </a>
           <div class="streak" title="Daily streak">${State.data.streak}d</div>
           <div class="xp-pill" id="xp-pill" title="XP / Level"><span class="dot"></span><span>Lv ${State.data.level}</span><span style="color:var(--fg-mute)">·</span><span id="xp-num">${State.data.xp} XP</span></div>
+          ${userTrigger()}
         </div>
       </div>
 
@@ -164,6 +232,15 @@ function buildShell(activeId) {
   // Close drawer when navigating via sidebar item on mobile
   document.getElementById("sidebar").addEventListener("click", e => {
     if (window.innerWidth <= 720 && e.target.closest("a")) closeDrawer();
+  });
+
+  bindUserMenu();
+
+  // Repaint the titlebar user area when auth changes (e.g. sign in/out
+  // in another tab — storage event — or by direct dispatch).
+  window.addEventListener("pylab:auth-change", () => location.reload());
+  window.addEventListener("storage", e => {
+    if (e.key === "pylab.auth.v1") location.reload();
   });
 
   // First-run onboarding (once per browser)
