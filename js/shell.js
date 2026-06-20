@@ -45,12 +45,24 @@ function buildShell(activeId) {
 
   const aiReady = typeof AI !== "undefined" && AI.available();
 
+  // Ensure polish.css is loaded.
+  if (!document.querySelector('link[href="css/polish.css"]')) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet"; link.href = "css/polish.css";
+    document.head.appendChild(link);
+  }
+
   const root = document.body;
   root.innerHTML = `
-    <div class="app">
-      <div class="titlebar">
-        <div class="brand"><div class="logo"></div><div class="brand-name"><b>pylab</b> · learn python</div></div>
-        <button class="cmd" id="cmd-open">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="app" id="app-root">
+      <div class="scrim" aria-hidden="true"></div>
+      <header class="titlebar" role="banner">
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="brand"><div class="logo"></div><div class="brand-name"><b>pylab</b> · learn</div></div>
+        <button class="cmd" id="cmd-open" aria-label="Open command palette">
           <span>Search lessons, challenges, ask the AI…</span>
           <kbd>Ctrl K</kbd>
         </button>
@@ -69,23 +81,23 @@ function buildShell(activeId) {
         </div>
       </div>
 
-      <nav class="activity">
+      <nav class="activity" aria-label="Primary navigation">
         ${NAV.filter(n => n.activity).map(n => `
-          <a class="ico ${n.id === activeId ? "active" : ""}" href="${n.href}" title="${n.label}">
+          <a class="ico ${n.id === activeId ? "active" : ""}" href="${n.href}" aria-label="${n.label}" ${n.id === activeId ? 'aria-current="page"' : ""}>
             ${n.icon()}
             <span class="tip">${n.label}</span>
           </a>
         `).join("")}
         <div class="spacer"></div>
-        <button class="ico" id="toggle-theme" title="Toggle theme">${iconTheme()}<span class="tip">Theme</span></button>
-        <a class="ico" href="settings.html" title="Settings">${iconSettings()}<span class="tip">Settings</span></a>
+        <button class="ico" id="toggle-theme" aria-label="Toggle theme">${iconTheme()}<span class="tip">Theme</span></button>
+        <a class="ico" href="settings.html" aria-label="Settings">${iconSettings()}<span class="tip">Settings</span></a>
       </nav>
 
-      <aside class="sidebar" id="sidebar"></aside>
+      <aside class="sidebar" id="sidebar" aria-label="Section navigation"></aside>
 
-      <main class="main" id="main"></main>
+      <main class="main" id="main" tabindex="-1"></main>
 
-      <footer class="statusbar">
+      <footer class="statusbar" role="contentinfo">
         <div class="runtime" id="runtime-status" title="Python runtime">
           <div class="dot"></div><span>Python ready</span>
         </div>
@@ -127,7 +139,69 @@ function buildShell(activeId) {
       e.preventDefault();
       openCommandPalette();
     }
+    if (e.key === "Escape") {
+      const app = document.getElementById("app-root");
+      if (app && app.classList.contains("drawer-open")) closeDrawer();
+    }
   });
+
+  // Mobile drawer
+  const ham = document.getElementById("hamburger");
+  const scrim = document.querySelector(".scrim");
+  function openDrawer() {
+    document.getElementById("app-root").classList.add("drawer-open");
+    ham.setAttribute("aria-expanded", "true");
+  }
+  function closeDrawer() {
+    document.getElementById("app-root").classList.remove("drawer-open");
+    ham.setAttribute("aria-expanded", "false");
+  }
+  ham.onclick = () => {
+    const open = document.getElementById("app-root").classList.contains("drawer-open");
+    open ? closeDrawer() : openDrawer();
+  };
+  scrim.onclick = closeDrawer;
+  // Close drawer when navigating via sidebar item on mobile
+  document.getElementById("sidebar").addEventListener("click", e => {
+    if (window.innerWidth <= 720 && e.target.closest("a")) closeDrawer();
+  });
+
+  // First-run onboarding (once per browser)
+  maybeShowOnboarding(activeId);
+}
+
+function maybeShowOnboarding(activeId) {
+  if (localStorage.getItem("pylab.onboarded.v1") === "1") return;
+  if (activeId !== "dashboard") return; // only on the dashboard
+  const ov = document.createElement("div");
+  ov.className = "onboarding";
+  ov.setAttribute("role", "dialog");
+  ov.setAttribute("aria-modal", "true");
+  ov.innerHTML = `
+    <div class="card">
+      <h2><span style="font-family:var(--font-mono);color:var(--accent);">›</span> Welcome to pylab</h2>
+      <p style="font-size:13px;color:var(--fg);">A workbench for learning real code in the browser. A few things worth knowing:</p>
+      <ul>
+        <li><span class="ic">1</span><span><b>Lessons</b> are typed exercises — you write the code, the platform checks it. Every visit shows a fresh AI-authored variant on the same topic.</span></li>
+        <li><span class="ic">2</span><span><b>9 languages</b> work out of the box: Python runs natively (Pyodide), JS/HTML/CSS execute live, Java/C/C++/SQL are simulated by AI.</span></li>
+        <li><span class="ic">3</span><span><b>AI tutor</b> is everywhere — ask for hints, code review, debugging, or open the dedicated <a href="chat.html">tutor chat</a>.</span></li>
+        <li><span class="ic">4</span><span><b>⌘K</b> opens the command palette. Anything you might want is one fuzzy search away.</span></li>
+      </ul>
+      <div class="actions">
+        <button class="btn" id="ob-skip">Skip</button>
+        <button class="btn primary" id="ob-go">Got it</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+  const dismiss = () => { localStorage.setItem("pylab.onboarded.v1", "1"); ov.remove(); };
+  ov.querySelector("#ob-skip").onclick = dismiss;
+  ov.querySelector("#ob-go").onclick = dismiss;
+  ov.addEventListener("click", e => { if (e.target === ov) dismiss(); });
+  document.addEventListener("keydown", function onEsc(e) {
+    if (e.key === "Escape") { dismiss(); document.removeEventListener("keydown", onEsc); }
+  });
+  setTimeout(() => ov.querySelector("#ob-go")?.focus(), 50);
 }
 
 // ----- Command palette -----

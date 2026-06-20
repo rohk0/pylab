@@ -61,17 +61,37 @@
       return { cur, needCurrent, needNext, pct: isFinite(pct) ? pct : 0 };
     },
     addXP(amount, reason = "") {
+      const xpBefore = this.data.xp;
       this.data.xp += amount;
       const before = this.data.level;
       while (this.data.xp >= this.xpForLevel(this.data.level + 1)) this.data.level++;
       this.touchStreak();
       this.save();
       this.popXP(amount);
-      // Live-update the XP pill if it's on the page.
-      const pill = document.getElementById("xp-num");
-      if (pill) pill.textContent = `${this.data.xp} XP`;
+      this.animateXP(xpBefore, this.data.xp);
       if (this.data.level > before) this.toast(`Level up! → Lv ${this.data.level}`);
       else this.toast(`+${amount} XP ${reason ? "· " + reason : ""}`);
+    },
+    animateXP(from, to) {
+      const el = document.getElementById("xp-num");
+      const pill = document.getElementById("xp-pill");
+      if (!el) return;
+      if (pill) { pill.classList.add("bump"); setTimeout(() => pill.classList.remove("bump"), 200); }
+      // Honour reduced-motion users — just snap.
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        el.textContent = `${to} XP`;
+        return;
+      }
+      const start = performance.now();
+      const dur = Math.min(900, 250 + Math.abs(to - from) * 6);
+      const tick = (t) => {
+        const p = Math.min(1, (t - start) / dur);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const v = Math.round(from + (to - from) * eased);
+        el.textContent = `${v} XP`;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
     },
     popXP(amount) {
       // Float a "+N XP" near the pill.

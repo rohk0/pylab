@@ -178,6 +178,12 @@ function loadCompanionMessage() {
     target.innerHTML = `<span class="subtle">Add a Groq key in <a href="settings.html#ai">Settings</a> to enable personalized AI guidance, daily practice, the tutor chat, and code review.</span>`;
     return;
   }
+  // Show a brief skeleton so the line isn't blank during generation.
+  target.innerHTML = `
+    <span class="skel skel-line w70"></span>
+    <span class="skel skel-line"></span>
+    <span class="skel skel-line w40"></span>
+  `;
   const CACHE = "pylab.companion";
   const TTL = 6 * 60 * 60 * 1000;
   try {

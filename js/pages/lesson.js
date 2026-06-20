@@ -186,11 +186,15 @@ function renderLessonPage() {
         if (exerciseIdx === totalEx - 1) {
           const wasNew = State.completeLesson(lesson.id, 15);
           if (wasNew) {
-            const extra = document.createElement("div");
-            extra.className = "feedback ok";
-            extra.style.marginTop = "6px";
-            extra.innerHTML = `🎉 Lesson complete · <b>+15 XP</b>`;
-            output.appendChild(extra);
+            const card = document.createElement("div");
+            card.className = "celebration";
+            card.setAttribute("role", "status");
+            card.innerHTML = `
+              <div class="ct">🎉 Lesson complete</div>
+              <div class="cs">${escapeHTML(lesson.title)} · streak now ${State.data.streak} day${State.data.streak === 1 ? "" : "s"}</div>
+              <div class="cx">+15 XP</div>
+            `;
+            output.appendChild(card);
           }
         }
         appendAIActionRow(output, "ok", { code, ex, lesson });
@@ -504,9 +508,19 @@ async function generateAILessonBody(lang, unit, lessonMeta, cacheKey) {
   main.innerHTML = `
     <div class="tabs"><div class="tab active">${escapeHTML(lessonMeta.title)}</div></div>
     <div class="page-narrow">
-      <div class="h1">Generating lesson…</div>
-      <div class="subtle">First open for this lesson. The tutor is authoring prose and exercises.</div>
-      <div style="margin-top:24px;text-align:center;"><div class="ai-dot" style="width:24px;height:24px;margin:0 auto;"></div></div>
+      <div class="h1">Authoring lesson…</div>
+      <div class="subtle">First open for this lesson. The tutor is writing the prose and an exercise tailored to the topic.</div>
+      <div class="skel-card" style="margin-top:14px;">
+        <span class="skel skel-line w40"></span>
+        <span class="skel skel-line"></span>
+        <span class="skel skel-line"></span>
+        <span class="skel skel-line w70"></span>
+      </div>
+      <div class="skel-card" style="margin-top:10px;">
+        <span class="skel skel-line w40"></span>
+        <span class="skel skel-line"></span>
+        <span class="skel skel-line w70"></span>
+      </div>
       <div id="gen-error" style="margin-top:12px;"></div>
     </div>
   `;

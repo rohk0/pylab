@@ -140,11 +140,15 @@ function renderChallengePage() {
       output.appendChild(fb);
       const wasNew = State.completeChallenge(ch.id, ch.xp);
       if (wasNew) {
-        const extra = document.createElement("div");
-        extra.className = "feedback ok";
-        extra.style.marginTop = "6px";
-        extra.innerHTML = `🎉 Challenge solved · <b>+${ch.xp} XP</b>`;
-        output.appendChild(extra);
+        const card = document.createElement("div");
+        card.className = "celebration";
+        card.setAttribute("role", "status");
+        card.innerHTML = `
+          <div class="ct">🎯 Challenge solved</div>
+          <div class="cs">${escapeHTML(ch.title)} · ${escapeHTML(ch.difficulty)}</div>
+          <div class="cx">+${ch.xp} XP</div>
+        `;
+        output.appendChild(card);
       }
       appendAIActionRow(output, "ok", ctx);
     } else {

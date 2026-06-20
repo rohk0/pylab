@@ -1,0 +1,371 @@
+/* ============================================================
+   Polish layer — mobile drawer, accessibility, micro-interactions,
+   loading skeletons, completion celebration. Loaded after main.css
+   so it can override layout where needed without rewriting it.
+   ============================================================ */
+
+/* ----- Focus rings (a11y) -----
+   The browser default outline is inconsistent across dark themes
+   and easily missed. We add a clear ring on :focus-visible only,
+   so it appears for keyboard users but not mouse clicks. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible,
+.btn:focus-visible,
+.ai-btn:focus-visible,
+.sb-item:focus-visible,
+.ch-card:focus-visible,
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent) !important;
+}
+
+/* ----- Skip-to-content link (keyboard only) ----- */
+.skip-link {
+  position: fixed;
+  top: -40px;
+  left: 10px;
+  background: var(--accent);
+  color: #001629;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  z-index: 1000;
+  transition: top 0.15s;
+}
+.skip-link:focus { top: 8px; }
+
+/* ----- Reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .page > *, .page-narrow > *, .page-wide > * { animation: none; }
+}
+
+/* ----- Touch targets — minimum 36×36 on mobile ----- */
+@media (max-width: 720px) {
+  .btn, .ai-btn, .tab, .otab, .sb-item {
+    min-height: 36px;
+  }
+}
+
+/* ============================================================
+   Mobile drawer for the sidebar (≤ 720px)
+   ============================================================ */
+.hamburger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg-strong);
+  border-radius: 4px;
+  width: 32px; height: 28px;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.hamburger:hover { background: var(--bg-hover); }
+.hamburger svg { width: 16px; height: 16px; }
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 89;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+.app.drawer-open .scrim { opacity: 1; pointer-events: auto; }
+
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "main"
+      "status";
+  }
+  .activity {
+    position: fixed;
+    top: var(--titlebar-h);
+    bottom: var(--statusbar-h);
+    left: 0;
+    width: var(--activity-w);
+    z-index: 92;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease-out;
+  }
+  .sidebar {
+    position: fixed;
+    top: var(--titlebar-h);
+    bottom: var(--statusbar-h);
+    left: var(--activity-w);
+    width: min(78vw, 320px);
+    z-index: 91;
+    transform: translateX(-110%);
+    transition: transform 0.18s ease-out;
+    box-shadow: 6px 0 20px rgba(0, 0, 0, 0.35);
+  }
+  .app.drawer-open .activity,
+  .app.drawer-open .sidebar { transform: translateX(0); }
+
+  .hamburger { display: inline-flex; }
+  .titlebar .brand .brand-name { display: none; }
+  .titlebar .cmd { flex: 1; }
+  .titlebar .cmd kbd { display: none; }
+  .titlebar .cmd span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Hide the streak/level pill on very narrow screens to keep titlebar clean */
+  .user .streak { display: none; }
+  .user .ai-badge span { display: none; }
+
+  /* Make AI panel full-width on mobile */
+  .ai-panel { width: 100vw; }
+}
+
+/* ============================================================
+   Mobile lesson layout
+   ============================================================ */
+@media (max-width: 760px) {
+  .lesson-prose {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    max-height: none;
+    overflow-y: visible;
+  }
+  .lesson-exercise {
+    min-height: 60vh;
+  }
+  /* Output pane uses less vertical space on small screens */
+  .output-pane { height: 180px; }
+  /* Stacked controls wrap */
+  .exercise-controls {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+  .exercise-controls .btn { flex: 1 1 auto; }
+  /* Filename input fits the line */
+  .editor-toolbar #fname { width: 140px !important; }
+
+  /* Sidebar items denser; group headers a bit larger */
+  .sb-item { padding: 10px 14px; }
+  .sb-header { padding-top: 12px; }
+}
+
+/* Phone-tier: ≤ 480px */
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+  .h1 { font-size: 18px; }
+  .h2 { font-size: 14.5px; }
+  .ch-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Modal full-screen on phones */
+  .modal {
+    max-width: 100vw;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+}
+
+/* ============================================================
+   Loading skeletons — shimmer placeholders. Replaces bare
+   "Loading…" text in cards, AI panels, and dashboard tiles.
+   ============================================================ */
+.skel {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 3px;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.skel-line   { height: 10px; margin: 6px 0; width: 100%; display: block; }
+.skel-line.w70 { width: 70%; }
+.skel-line.w40 { width: 40%; }
+.skel-card { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-elev); }
+
+/* ============================================================
+   Empty states — meaningful, actionable
+   ============================================================ */
+.empty {
+  text-align: center;
+  padding: 36px 18px;
+  max-width: 520px;
+  margin: 0 auto;
+  color: var(--fg-dim);
+}
+.empty .empty-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-mute);
+}
+.empty .empty-icon svg { width: 24px; height: 24px; }
+.empty h3 { color: var(--fg-strong); font-size: 16px; margin-bottom: 6px; }
+.empty p { font-size: 13px; line-height: 1.6; }
+.empty .empty-actions { margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* ============================================================
+   Animated XP counter & XP pill state
+   ============================================================ */
+.xp-pill { transition: transform 0.12s ease-out; }
+.xp-pill.bump { transform: scale(1.06); }
+
+/* ============================================================
+   Completion celebration card — fires when a lesson/challenge
+   is completed. Replaces the tiny inline "+15 XP" line.
+   ============================================================ */
+.celebration {
+  background: linear-gradient(135deg, rgba(74,194,138,0.12), rgba(94,177,255,0.10));
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+  animation: celebrate-pop 0.4s ease-out;
+}
+.celebration .ct { color: var(--green); font-weight: 700; font-size: 14px; }
+.celebration .cs { color: var(--fg); font-size: 12.5px; margin-top: 4px; }
+.celebration .cx {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--green); font-family: var(--font-mono); font-weight: 700;
+  font-size: 18px;
+  text-shadow: 0 0 12px rgba(74, 194, 138, 0.5);
+}
+@keyframes celebrate-pop {
+  0%   { transform: translateY(6px) scale(0.96); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+.celebration::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, var(--green) 1px, transparent 1.5px),
+    radial-gradient(circle at 80% 60%, var(--accent) 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 80%, var(--yellow) 1px, transparent 1.5px),
+    radial-gradient(circle at 30% 70%, var(--pink) 1px, transparent 1.5px),
+    radial-gradient(circle at 70% 25%, var(--cyan) 1px, transparent 1.5px);
+  opacity: 0;
+  animation: confetti-fade 1.5s ease-out;
+  pointer-events: none;
+}
+@keyframes confetti-fade {
+  0%   { opacity: 0.7; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+/* ============================================================
+   First-run onboarding overlay (dismissed forever after close)
+   ============================================================ */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.2s ease-out;
+}
+.onboarding .card {
+  max-width: 480px;
+  width: calc(100% - 32px);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.onboarding h2 {
+  font-size: 16px;
+  color: var(--fg-strong);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.onboarding ul { margin: 12px 0; padding-left: 0; list-style: none; }
+.onboarding li {
+  display: flex; gap: 10px; margin: 10px 0;
+  font-size: 13px; color: var(--fg);
+}
+.onboarding li .ic {
+  width: 22px; height: 22px;
+  background: rgba(94,177,255,0.12);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  font-family: var(--font-mono); font-weight: 700; font-size: 11px;
+}
+.onboarding .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================================
+   Button hierarchy — refine consistency
+   ============================================================ */
+.btn { transition: background 0.1s, border-color 0.1s, transform 0.04s; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { border-color: var(--accent); }
+.btn.primary:hover { background: rgba(94, 177, 255, 0.12); }
+.btn.danger { border-color: var(--red); color: var(--red); }
+.btn.danger:hover { background: rgba(239, 107, 107, 0.10); }
+.btn.success { border-color: var(--green); color: var(--green); }
+.btn.success:hover { background: rgba(74, 194, 138, 0.10); }
+
+/* ai-btn already styled in ai.css — just tighten the disabled state */
+.ai-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ============================================================
+   Inline feedback boxes — tighter, more readable
+   ============================================================ */
+.feedback {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-left: 3px solid transparent;
+  margin: 4px 0;
+}
+.feedback.ok   { background: rgba(74, 194, 138, 0.08); border-left-color: var(--green); color: #c8ecd6; }
+.feedback.bad  { background: rgba(239, 107, 107, 0.08); border-left-color: var(--red);   color: #f2cccc; }
+.feedback.hint { background: rgba(232, 183, 90, 0.08);  border-left-color: var(--yellow); color: #f0deb6; }
+.feedback.info { background: rgba(94, 177, 255, 0.08);  border-left-color: var(--accent); color: #cce4f6; }
+
+/* ============================================================
+   Reduce visual noise: cards have softer borders, less shadow
+   ============================================================ */
+.card { transition: border-color 0.12s; }
+.card:hover { border-color: var(--border-strong); }
+.ch-card {
+  transition: border-color 0.12s, background 0.12s, transform 0.06s;
+}
+.ch-card:hover { transform: translateY(-1px); }
+
+/* Scroll-margin so anchor jumps don't tuck under sticky chrome */
+section[id], div[id] { scroll-margin-top: 56px; }

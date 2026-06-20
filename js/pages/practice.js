@@ -76,10 +76,14 @@ function renderPractice() {
     main.innerHTML = `
       <div class="tabs"><div class="tab active">Daily Practice</div></div>
       <div class="page-narrow">
-        <div class="h1">Generating today's challenge…</div>
-        <div class="subtle">Asking the tutor to pick something at your level.</div>
-        <div style="margin-top:24px;text-align:center;">
-          <div class="ai-dot" style="margin:0 auto;width:24px;height:24px;"></div>
+        <div class="h1"><span class="skel skel-line w70" style="height:22px;"></span></div>
+        <div class="subtle">Asking the tutor to pick something at your level…</div>
+        <div class="skel-card" style="margin-top:18px;">
+          <span class="skel skel-line w40"></span>
+          <span class="skel skel-line"></span>
+          <span class="skel skel-line"></span>
+          <span class="skel skel-line w70"></span>
+          <span class="skel skel-line w40" style="margin-top:14px;"></span>
         </div>
       </div>
     `;

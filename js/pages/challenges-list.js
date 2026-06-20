@@ -78,7 +78,19 @@ function renderChallenges() {
                 </div>
               </a>
             `;
-          }).join("") || `<div class="empty"><h3>No challenges match these filters.</h3></div>`}
+          }).join("") || `
+            <div class="empty">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+              </div>
+              <h3>No challenges match those filters</h3>
+              <p>Try a wider filter — or let the AI invent a fresh one tuned to whatever you want to practice.</p>
+              <div class="empty-actions">
+                <button class="btn" onclick="document.querySelector('[data-filter=all]').click();">Clear filters</button>
+                <button class="ai-btn" onclick="openChallengeGenerator()">Generate AI challenge</button>
+              </div>
+            </div>
+          `}
         </div>
       </div>
     `;
