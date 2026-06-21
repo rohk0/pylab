@@ -86,6 +86,8 @@ function renderDashboard() {
         </div>
       </div>
 
+      ${whatsNewCardHTML()}
+
       <div class="card" style="margin-bottom:16px;border-left:3px solid var(--accent-2);">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <div class="ai-dot"></div>
@@ -174,6 +176,20 @@ function renderDashboard() {
 
   // Companion message — cached for 6 hours per device.
   loadCompanionMessage();
+
+  // What's-new dismiss
+  const wnBtn = document.getElementById("wn-dismiss");
+  if (wnBtn) wnBtn.onclick = () => {
+    let dismissed = {};
+    try { dismissed = JSON.parse(localStorage.getItem("pylab.whatsnew.dismissed") || "{}"); } catch {}
+    const first = WHATS_NEW.find(w => !dismissed[w.id]);
+    if (first) {
+      dismissed[first.id] = Date.now();
+      localStorage.setItem("pylab.whatsnew.dismissed", JSON.stringify(dismissed));
+    }
+    const card = document.getElementById("whats-new");
+    if (card) card.remove();
+  };
 }
 
 function loadCompanionMessage() {
@@ -207,6 +223,30 @@ function loadCompanionMessage() {
     .catch(e => {
       target.innerHTML = `<span class="subtle">${escapeHTML(AI.friendlyError(e))}</span>`;
     });
+}
+
+// What's-new card on the dashboard — surfaces recently-added units
+// so they don't get lost at the bottom of the curriculum. Dismissed
+// permanently once the user clicks ×.
+const WHATS_NEW = [
+  { id: "wn-cpp-stl",   text: "New: <b>C++</b> curriculum (8 units, 23 lessons) — STL, templates, modern C++.", href: "lessons.html" },
+  { id: "wn-curricula", text: "New: <b>JavaScript</b>, <b>Java</b>, <b>HTML</b>, <b>CSS</b> curricula now show full lesson lists immediately. Click a lesson — AI authors the body on demand.", href: "lessons.html" },
+  { id: "wn-text",      text: "Two new Python units: <b>Toolbox</b> (stdlib) and <b>Text &amp; Patterns</b> (regex + JSON).", href: "lessons.html#u-toolbox" },
+  { id: "wn-ai",        text: "New Python unit: <b>Coding AI</b> — build ML from scratch in pure Python.", href: "lessons.html#u-ml" },
+];
+function whatsNewCardHTML() {
+  let dismissed = {};
+  try { dismissed = JSON.parse(localStorage.getItem("pylab.whatsnew.dismissed") || "{}"); } catch {}
+  const items = WHATS_NEW.filter(w => !dismissed[w.id]);
+  if (!items.length) return "";
+  const top = items[0];
+  return `
+    <div class="card" id="whats-new" style="margin-bottom:16px;border-left:3px solid var(--green);display:flex;align-items:center;gap:10px;padding:10px 14px;">
+      <div style="background:var(--green);color:#0a1a10;font-family:var(--font-mono);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:3px;letter-spacing:0.5px;flex-shrink:0;">NEW</div>
+      <div style="flex:1;line-height:1.5;font-size:13px;">${top.text} <a href="${top.href}" style="margin-left:6px;color:var(--accent);text-decoration:none;">View →</a></div>
+      <button id="wn-dismiss" aria-label="Dismiss" style="background:transparent;border:0;color:var(--fg-mute);font-size:18px;line-height:1;cursor:pointer;padding:0 4px;">×</button>
+    </div>
+  `;
 }
 
 function weekXP() {

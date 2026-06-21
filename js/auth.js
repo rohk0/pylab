@@ -246,10 +246,14 @@ window.Auth = Auth;
 // ============================================================
 
 const SignInModal = (() => {
-  const DISMISS_KEY = "pylab.signin.dismissed";
+  const DISMISS_KEY = "pylab.signin.dismissedAt";
+  const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 
-  function dismissed() { return sessionStorage.getItem(DISMISS_KEY) === "1"; }
-  function dismiss()   { sessionStorage.setItem(DISMISS_KEY, "1"); }
+  function dismissed() {
+    const at = +(localStorage.getItem(DISMISS_KEY) || 0);
+    return at > 0 && (Date.now() - at) < DISMISS_TTL_MS;
+  }
+  function dismiss()   { localStorage.setItem(DISMISS_KEY, String(Date.now())); }
 
   function close() {
     const root = document.getElementById("signin-modal");

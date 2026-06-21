@@ -14,10 +14,17 @@ function renderLessons() {
 
   function curriculumFor(lid) {
     if (lid === "python") return { units: LESSONS, generated: false };
+    // User-generated (AI-authored) override takes priority.
     try {
       const raw = localStorage.getItem("pylab.curriculum." + lid);
-      if (raw) return { units: JSON.parse(raw), generated: true };
+      if (raw) return { units: JSON.parse(raw), generated: true, source: "ai" };
     } catch {}
+    // Then a baked-in default curriculum — units exist, lesson bodies
+    // still get AI-generated on first open.
+    const baked = window.DEFAULT_CURRICULA && window.DEFAULT_CURRICULA[lid];
+    if (baked && Array.isArray(baked) && baked.length) {
+      return { units: baked, generated: false, source: "baked" };
+    }
     return { units: null, generated: true };
   }
 
@@ -83,15 +90,17 @@ function renderLessons() {
       return;
     }
 
+    const source = curriculumFor(langId).source;
     main.innerHTML = `
       <div class="tabs" id="lang-tabs">${tabs}</div>
       <div class="page-wide">
         <div style="display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;">
           <div>
             <div class="h1">${lang.name} curriculum</div>
-            <div class="subtle">${units.reduce((a, u) => a + (u.lessons || []).length, 0)} lessons across ${units.length} units. ${generated ? "AI-generated · " : ""}Each ends with a typed coding exercise.</div>
+            <div class="subtle">${units.reduce((a, u) => a + (u.lessons || []).length, 0)} lessons across ${units.length} units. ${source === "ai" ? "AI-generated · " : source === "baked" ? "Curated · lesson bodies generated on demand · " : ""}Each ends with a typed coding exercise.</div>
           </div>
-          ${generated ? `<button class="ai-btn" id="regen-curr">Regenerate</button>` : ""}
+          ${source === "ai" ? `<button class="ai-btn" id="regen-curr">Regenerate</button>` :
+            source === "baked" ? `<button class="ai-btn" id="regen-curr">Replace with AI</button>` : ""}
         </div>
 
         ${units.map(u => {
@@ -138,8 +147,12 @@ function renderLessons() {
       </div>
     `;
     bindTabs();
-    if (generated) document.getElementById("regen-curr").onclick = () => {
-      if (!confirm(`Regenerate the ${lang.name} curriculum? Local cache will be replaced.`)) return;
+    const regenBtn = document.getElementById("regen-curr");
+    if (regenBtn) regenBtn.onclick = () => {
+      const msg = source === "baked"
+        ? `Replace the curated ${lang.name} curriculum with an AI-generated one? The curated version is always available later.`
+        : `Regenerate the ${lang.name} curriculum? Local cache will be replaced.`;
+      if (!confirm(msg)) return;
       localStorage.removeItem("pylab.curriculum." + langId);
       generateCurriculum();
     };
