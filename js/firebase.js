@@ -62,14 +62,23 @@ if (!cfg || !cfg.apiKey) {
   }
 
   // ---- save / hydrate ----
+  // Firestore rejects undefined values. Round-trip the state through
+  // JSON to strip them and any non-serialisable cruft (functions, etc).
+  function sanitize(state) {
+    try { return JSON.parse(JSON.stringify(state)); }
+    catch { return null; }
+  }
+
   let saveTimer = null;
   async function saveState(state) {
     if (!auth.currentUser) return;
+    const clean = sanitize(state);
+    if (!clean) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
         await setDoc(doc(db, "users", auth.currentUser.uid),
-          { state, updatedAt: serverTimestamp() },
+          { state: clean, updatedAt: serverTimestamp() },
           { merge: true });
       } catch (e) {
         console.warn("[firebase] save failed:", e?.message || e);

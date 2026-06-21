@@ -27,12 +27,26 @@
     weeklyGoal: 250,         // XP per week
   });
 
+  // Merge an incoming partial state with our defaults so we never
+  // leave required fields undefined or null. Object spread alone
+  // doesn't handle the null case (null overrides defaults), so we
+  // sweep through and replace falsy values for object/array fields.
+  function withDefaults(incoming) {
+    const d = defaults();
+    const merged = { ...d, ...(incoming || {}) };
+    merged.settings = { ...d.settings, ...((incoming && incoming.settings) || {}) };
+    // Repair fields where null/undefined would crash downstream code.
+    for (const key of Object.keys(d)) {
+      if (merged[key] == null) merged[key] = d[key];
+    }
+    return merged;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return defaults();
-      const parsed = JSON.parse(raw);
-      return { ...defaults(), ...parsed, settings: { ...defaults().settings, ...(parsed.settings || {}) } };
+      return withDefaults(JSON.parse(raw));
     } catch (e) {
       console.warn("State load failed:", e);
       return defaults();
@@ -172,10 +186,12 @@
   save();
 
   // React to Firestore-pushed state from another device / tab.
-  // Firebase emits this after it merges remote into localStorage.
+  // Merge the incoming snapshot with defaults so missing fields
+  // (notes/playgroundFiles/etc.) don't crash downstream consumers.
   window.addEventListener("pylab:state-sync", e => {
     if (!e?.detail) return;
-    State.data = e.detail;
+    State.data = withDefaults(e.detail);
+    try { localStorage.setItem(KEY, JSON.stringify(State.data)); } catch {}
     State.emit();
   });
 })();
