@@ -96,4 +96,94 @@ const Grader = {
   }
 };
 
+// ============================================================
+// Multi-language grading dispatcher.
+//
+//   Grader.gradeFor(code, ex, langId) -> { ok, kind, message, stdout }
+//
+// Routes by language:
+//   python     → existing Pyodide grader
+//   javascript → in-page sandboxed eval + check assertions
+//   typescript → strip types, treat as JS, in-page eval
+//   else       → caller falls back to AI grading (returns ok=false,
+//                kind="needs_ai" so the caller knows to ask the AI)
+// ============================================================
+
+Grader.gradeFor = async function (code, ex, langId) {
+  langId = String(langId || "python").toLowerCase();
+  if (langId === "python") return this.grade(code, ex);
+  if (langId === "javascript" || langId === "typescript") return this.gradeJS(code, ex, langId);
+  return { ok: false, kind: "needs_ai", message: "" };
+};
+
+// Sandboxed JS execution + check assertions. The check script uses
+// a small assert(cond, msg) helper that throws on failure. The check
+// must end by logging "CHECK_OK" — same convention as Python.
+Grader.gradeJS = async function (code, ex, langId = "javascript") {
+  if (!ex || typeof ex.check !== "string" || !ex.check.trim()) {
+    return { ok: false, kind: "needs_ai", message: "" };
+  }
+  let userCode = code;
+  if (langId === "typescript") userCode = stripTSTypes(userCode);
+
+  const captured = [];
+  const fakeConsole = {
+    log:   (...a) => captured.push(a.map(fmt).join(" ")),
+    info:  (...a) => captured.push(a.map(fmt).join(" ")),
+    warn:  (...a) => captured.push(a.map(fmt).join(" ")),
+    error: (...a) => captured.push(a.map(fmt).join(" ")),
+    debug: (...a) => captured.push(a.map(fmt).join(" ")),
+  };
+  const wrapped = `"use strict";
+function assert(cond, msg) { if (!cond) throw new Error(msg || "Assertion failed"); }
+${userCode}
+${ex.check}
+`;
+  let lastErr = null;
+  try {
+    const fn = new Function("console", `return (async () => { ${wrapped} })();`);
+    await fn(fakeConsole);
+  } catch (e) {
+    lastErr = e;
+  }
+  const stdout = captured.join("\n");
+  if (lastErr) {
+    return {
+      ok: false,
+      kind: lastErr.message?.toLowerCase().includes("assert") ? "wrong" : "runtime",
+      message: String(lastErr.message || lastErr),
+      stdout,
+    };
+  }
+  if (stdout.includes("CHECK_OK")) {
+    return {
+      ok: true, kind: "pass",
+      message: "Nice — all checks passed.",
+      stdout: stdout.replace(/CHECK_OK\n?/g, "").trim(),
+    };
+  }
+  return {
+    ok: false, kind: "wrong",
+    message: "Your code ran, but the grader didn't get a CHECK_OK signal.",
+    stdout,
+  };
+  function fmt(v) {
+    if (typeof v === "string") return v;
+    try { return JSON.stringify(v); } catch { return String(v); }
+  }
+};
+
+// Cheap TypeScript-to-JS for grading purposes. Strips parameter
+// types, return types, variable annotations, `as` casts, and the
+// most common interface/type-alias declarations. Not a real
+// compiler — only needs to be good enough that the assertions can
+// run against the user's runtime behavior.
+function stripTSTypes(src) {
+  return src
+    .replace(/^\s*(?:interface|type)\s+\w+\s*=?[\s\S]*?(?:\}|;)\s*$/gm, "")
+    .replace(/:\s*[\w<>,\[\]\s|&]+(?=\s*[=,)\];])/g, "")
+    .replace(/\)\s*:\s*[\w<>,\[\]\s|&]+\s*(?==>|\{|;)/g, ")")
+    .replace(/\s+as\s+[\w<>,\[\]\s|&]+/g, "");
+}
+
 window.Grader = Grader;

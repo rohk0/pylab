@@ -496,8 +496,13 @@ async function renderAILessonPage(langId, lessonId) {
 
   const CACHE = `pylab.lesson.${langId}.${lessonId}`;
   let body = null;
-  try { body = JSON.parse(localStorage.getItem(CACHE) || "null"); } catch {}
-  if (!body) body = await generateAILessonBody(lang, unit, lessonMeta, CACHE);
+  // Priority: hand-written body > localStorage cache > AI-generate.
+  if (window.DEFAULT_LESSON_BODIES && window.DEFAULT_LESSON_BODIES[lessonId]) {
+    body = window.DEFAULT_LESSON_BODIES[lessonId];
+  } else {
+    try { body = JSON.parse(localStorage.getItem(CACHE) || "null"); } catch {}
+    if (!body) body = await generateAILessonBody(lang, unit, lessonMeta, CACHE);
+  }
   if (!body) return;
 
   paintAILesson(lang, unit, lessonMeta, body, prev, next);
@@ -528,7 +533,11 @@ async function generateAILessonBody(lang, unit, lessonMeta, cacheKey) {
     document.getElementById("gen-error").innerHTML = `<div class="feedback bad">No Groq key configured. Add one in <a href="settings.html#ai">Settings</a>.</div>`;
     return null;
   }
-  const sys = `You write programming lessons as strict JSON. Return ONLY JSON.\n\nSchema:\n{\n  "prose": "markdown lesson body, 3-6 short paragraphs with at least one code example. Use fenced ${lang.id} code blocks.",\n  "exercise": {\n    "prompt": "one-paragraph task statement",\n    "starter": "starter code in ${lang.name}",\n    "hints": ["hint 1", "hint 2", "hint 3"],\n    "solution": "full reference solution",\n    "tests": "human-readable rubric of what a correct solution must demonstrate"\n  }\n}\n\nFocus this lesson tightly on the topic.`;
+  const wantsCheck = (lang.id === "javascript" || lang.id === "typescript");
+  const checkClause = wantsCheck
+    ? `,\n    "check": "${lang.name} code that runs AFTER the user's code in the same scope. Use assert(cond, msg) (already defined). End with console.log('CHECK_OK'). 3-6 assertions covering normal + edge cases. NO comments, NO console.log other than the final CHECK_OK."`
+    : "";
+  const sys = `You write programming lessons as strict JSON. Return ONLY JSON.\n\nSchema:\n{\n  "prose": "markdown lesson body, 3-6 short paragraphs with at least one code example. Use fenced ${lang.id} code blocks.",\n  "exercise": {\n    "prompt": "one-paragraph task statement",\n    "starter": "starter code in ${lang.name}",\n    "hints": ["hint 1", "hint 2", "hint 3"],\n    "solution": "full reference solution",\n    "tests": "human-readable rubric of what a correct solution must demonstrate"${checkClause}\n  }\n}\n\nFocus this lesson tightly on the topic.`;
   try {
     const data = await AI.json([
       { role: "system", content: sys },
@@ -626,6 +635,48 @@ function paintAILesson(lang, unit, lessonMeta, body, prev, next) {
     if (out.children.length === 0) out.innerHTML = `<span class="dim">(no output)</span>`;
   }
   async function doCheck() {
+    // Prefer the in-browser grader when the language has local
+    // execution AND the exercise ships an executable check.
+    const code = editor.getValue();
+    const local = await Grader.gradeFor(code, ex, lang.id);
+    if (local.kind !== "needs_ai") {
+      out.innerHTML = "";
+      if (local.stdout) {
+        const pre = document.createElement("div");
+        pre.textContent = local.stdout;
+        out.appendChild(pre);
+      }
+      const fb = document.createElement("div");
+      fb.className = "feedback " + (local.ok ? "ok" : "bad");
+      fb.innerHTML = local.ok
+        ? `<b>✓ Correct.</b> ${escapeHTML(local.message)}`
+        : `<b>✗ ${escapeHTML(local.kind === "runtime" ? "Runtime error." : "Not quite.")}</b><pre style="margin:6px 0 0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;">${escapeHTML(local.message)}</pre>`;
+      out.appendChild(fb);
+      Tracker.recordAttempt({
+        id: `lesson:${lang.id}:${lessonMeta.id}`,
+        topic: lessonMeta.topics || [unit.title],
+        ok: local.ok,
+        errorName: !local.ok && local.message ? guessErrorName(local.message) : null,
+        kind: "lesson",
+        ref: lessonMeta.id,
+      });
+      const ctx = { code, ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose }, error: local.message, stdout: local.stdout };
+      if (local.ok) {
+        const wasNew = State.completeLesson(lessonMeta.id, 15);
+        if (wasNew) {
+          const extra = document.createElement("div");
+          extra.className = "feedback ok"; extra.style.marginTop = "6px";
+          extra.innerHTML = `🎉 Lesson complete · <b>+15 XP</b>`;
+          out.appendChild(extra);
+        }
+        appendAIActionRow(out, "ok", ctx);
+      } else {
+        appendAIActionRow(out, "bad", ctx);
+      }
+      return;
+    }
+    // Fallback: AI grading for languages without local execution
+    // (Java / C / C++ / SQL).
     if (!AI.available()) {
       out.innerHTML = `<div class="feedback bad">AI verification needs a Groq key.</div>`;
       return;
@@ -634,7 +685,7 @@ function paintAILesson(lang, unit, lessonMeta, body, prev, next) {
     try {
       const verdict = await AI.json([
         { role: "system", content: `You are a strict code grader for ${lang.name}. Reply ONLY with JSON: {"pass": <bool>, "summary": "<one-line>", "notes": "<2-4 sentence feedback>"}.` },
-        { role: "user", content: `Exercise: ${ex.prompt}\n\nMust demonstrate:\n${ex.tests || "(judge by the prompt)"}\n\nSubmitted ${lang.name}:\n${editor.getValue()}` }
+        { role: "user", content: `Exercise: ${ex.prompt}\n\nMust demonstrate:\n${ex.tests || "(judge by the prompt)"}\n\nSubmitted ${lang.name}:\n${code}` }
       ], { maxTokens: 400, temperature: 0.2 });
       out.innerHTML = "";
       const ok = !!verdict?.pass;
@@ -645,9 +696,7 @@ function paintAILesson(lang, unit, lessonMeta, body, prev, next) {
       Tracker.recordAttempt({
         id: `lesson:${lang.id}:${lessonMeta.id}`,
         topic: lessonMeta.topics || [unit.title],
-        ok,
-        kind: "lesson",
-        ref: lessonMeta.id,
+        ok, kind: "lesson", ref: lessonMeta.id,
       });
       if (ok) {
         const wasNew = State.completeLesson(lessonMeta.id, 15);
@@ -657,9 +706,9 @@ function paintAILesson(lang, unit, lessonMeta, body, prev, next) {
           extra.innerHTML = `🎉 Lesson complete · <b>+15 XP</b>`;
           out.appendChild(extra);
         }
-        appendAIActionRow(out, "ok", { code: editor.getValue(), ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose } });
+        appendAIActionRow(out, "ok", { code, ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose } });
       } else {
-        appendAIActionRow(out, "bad", { code: editor.getValue(), ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose }, error: verdict?.notes || "", stdout: "" });
+        appendAIActionRow(out, "bad", { code, ex: { prompt: ex.prompt }, lesson: { title: lessonMeta.title, prose: body.prose }, error: verdict?.notes || "", stdout: "" });
       }
     } catch (e) {
       out.innerHTML = `<div class="feedback bad">${escapeHTML(AI.friendlyError(e))}</div>`;
