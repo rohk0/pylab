@@ -15,7 +15,7 @@
 //     caches get evicted on activate
 // ============================================================
 
-const CACHE_VERSION = "pylab-v1";
+const CACHE_VERSION = "pylab-v2";
 
 const PRECACHE = [
   "./",
@@ -45,6 +45,7 @@ const PRECACHE = [
   "./js/data/flashcards.js",
   "./js/data/curricula.js",
   "./js/data/lesson-bodies.js",
+  "./icons/logo.png",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg",
 ];

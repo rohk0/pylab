@@ -128,7 +128,11 @@ function buildShell(activeId) {
         <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div class="brand"><div class="logo"></div><div class="brand-name"><b>pylab</b> · learn</div></div>
+        <a href="index.html" class="brand" aria-label="pylab home" style="text-decoration:none;color:inherit;">
+          <img src="icons/logo.png" alt="" class="logo-img" width="22" height="22"
+               style="display:block;border-radius:5px;object-fit:cover;" />
+          <div class="brand-name"><b>pylab</b> · learn</div>
+        </a>
         <button class="cmd" id="cmd-open" aria-label="Open command palette">
           <span>Search lessons, challenges, ask the AI…</span>
           <kbd>Ctrl K</kbd>
