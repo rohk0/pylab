@@ -1,0 +1,471 @@
+/* ============================================================
+   Landing page — separate from the app shell so it can be light,
+   marketing-y, with generous whitespace and Apple-style sticky
+   scroll. The app itself stays its editor-grade dark UI.
+   ============================================================ */
+
+:root {
+  --lp-bg: #0a0c10;
+  --lp-bg-2: #11141a;
+  --lp-fg: #e8ecf1;
+  --lp-dim: #9aa3b0;
+  --lp-mute: #5d6573;
+  --lp-border: rgba(255,255,255,0.08);
+  --lp-accent: #5eb1ff;
+  --lp-accent-2: #b08bff;
+
+  --font-ui: -apple-system, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body.landing {
+  margin: 0;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; }
+
+/* ----- Header ----- */
+.lp-header {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center;
+  gap: 24px;
+  padding: 14px 32px;
+  background: rgba(10, 12, 16, 0.7);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--lp-border);
+}
+.lp-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 600; letter-spacing: -0.2px;
+  text-decoration: none;
+}
+.lp-brand img { border-radius: 6px; display: block; }
+.lp-brand span { font-size: 18px; }
+.lp-nav { display: flex; gap: 20px; flex: 1; justify-content: center; }
+.lp-nav a {
+  text-decoration: none;
+  color: var(--lp-dim);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.lp-nav a:hover { color: var(--lp-fg); }
+.lp-actions { display: flex; gap: 10px; align-items: center; }
+
+/* ----- Buttons ----- */
+.lp-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s, background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.lp-btn.primary {
+  background: var(--lp-fg);
+  color: #0a0c10;
+}
+.lp-btn.primary:hover { background: #fff; transform: translateY(-1px); }
+.lp-btn.ghost {
+  background: transparent;
+  border-color: var(--lp-border);
+  color: var(--lp-fg);
+}
+.lp-btn.ghost:hover { border-color: var(--lp-fg); transform: translateY(-1px); }
+.lp-btn.big {
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Hero — the sticky logo trick. The hero is a tall two-column
+   section. The image column has position: sticky so it pins at
+   the top as you scroll; the copy column scrolls normally past it.
+   ============================================================ */
+
+.hero {
+  padding: 80px 32px 120px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 48px;
+  align-items: start;
+}
+.hero-sticky {
+  position: sticky;
+  top: 80px; /* clear the sticky header */
+  align-self: start;
+  display: flex; align-items: center; justify-content: center;
+  min-height: calc(100vh - 120px);
+}
+.hero-img {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 32px;
+  box-shadow:
+    0 30px 60px -20px rgba(94, 177, 255, 0.18),
+    0 12px 30px rgba(0, 0, 0, 0.4);
+  animation: heroFloat 9s ease-in-out infinite;
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+.hero-copy { padding-top: 80px; }
+.hero-eyebrow {
+  font-size: 13px;
+  color: var(--lp-accent);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.hero-title {
+  margin: 0 0 18px;
+  font-size: clamp(40px, 6vw, 76px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  color: var(--lp-fg);
+}
+.hero-sub {
+  font-size: 19px;
+  color: var(--lp-dim);
+  max-width: 540px;
+  margin: 0 0 32px;
+}
+.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.hero-meta {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--lp-mute);
+  font-family: var(--font-mono);
+}
+.hero-meta .dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--lp-mute);
+}
+
+/* ============================================================
+   Features — alternating sticky-image-and-copy rows.
+   Same pattern as the hero: each row's image is sticky within
+   its own row, so it stays visible as the row's copy scrolls.
+   ============================================================ */
+
+.lp-section-tag {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--lp-mute);
+  font-family: var(--font-mono);
+  margin-bottom: 18px;
+}
+.lp-section-h {
+  text-align: center;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 48px;
+}
+
+.features {
+  background: var(--lp-bg-2);
+  padding: 100px 32px 60px;
+  border-top: 1px solid var(--lp-border);
+}
+.feature {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+  padding: 80px 0;
+  border-bottom: 1px solid var(--lp-border);
+}
+.feature:last-child { border-bottom: 0; }
+.feature.feature-r .feature-sticky { order: 0; }
+.feature.feature-r .feature-copy   { order: 1; }
+.feature-sticky {
+  position: sticky;
+  top: 100px;
+  align-self: start;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 360px;
+}
+.feature-copy { padding-top: 24px; }
+.feature-eyebrow {
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--lp-accent-2);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.feature-copy h2 {
+  margin: 0 0 16px;
+  font-size: clamp(28px, 3.4vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.feature-copy p {
+  font-size: 17px;
+  color: var(--lp-dim);
+  margin: 0;
+  max-width: 480px;
+}
+
+/* Feature visual cards */
+.feature-card {
+  background: #0e1116;
+  border: 1px solid var(--lp-border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+/* Editor mock */
+.editor .card-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px;
+  background: #1a1f28;
+  border-bottom: 1px solid var(--lp-border);
+}
+.editor .card-bar span {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #3a4252;
+}
+.editor .card-bar span:nth-child(1) { background: #ff5f57; }
+.editor .card-bar span:nth-child(2) { background: #ffbd2e; }
+.editor .card-bar span:nth-child(3) { background: #28c840; }
+.editor .card-file {
+  margin-left: 12px; font-family: var(--font-mono);
+  font-size: 12px; color: var(--lp-mute);
+}
+.editor .card-code {
+  margin: 0; padding: 18px 20px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre;
+}
+.editor .card-code .kw  { color: #c586c0; }
+.editor .card-code .fn  { color: #dcdcaa; }
+.editor .card-code .str { color: #ce9178; }
+.editor .card-out {
+  padding: 10px 20px;
+  border-top: 1px solid var(--lp-border);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: #6a9955;
+  background: #0a0d12;
+}
+
+/* Chat mock */
+.chat .chat-row {
+  padding: 12px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--lp-fg);
+  border-bottom: 1px solid var(--lp-border);
+}
+.chat .chat-row:last-child { border-bottom: 0; }
+.chat .chat-row b {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-right: 8px;
+  color: var(--lp-mute);
+}
+.chat .chat-row.you b { color: var(--lp-accent); }
+.chat .chat-row.ai b  { color: var(--lp-accent-2); }
+.chat .chat-row code {
+  background: rgba(255,255,255,0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--lp-accent);
+}
+
+/* Language chips */
+.langs {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.lang-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: #11161e;
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--lp-fg);
+}
+.lang-chip b {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 22px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, var(--lp-accent), var(--lp-accent-2));
+  color: #0a0c10;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* ============================================================
+   Language picker grid
+   ============================================================ */
+.languages {
+  padding: 100px 32px;
+  border-top: 1px solid var(--lp-border);
+}
+.lang-grid {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.lang-tile {
+  padding: 22px 14px;
+  background: var(--lp-bg-2);
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--lp-fg);
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+.lang-tile:hover {
+  border-color: var(--lp-accent);
+  background: #161a23;
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   Open source card / final CTA
+   ============================================================ */
+.open {
+  padding: 100px 32px;
+  background: var(--lp-bg-2);
+  border-top: 1px solid var(--lp-border);
+}
+.open-card {
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 60px 40px;
+  background: radial-gradient(ellipse at top, rgba(94,177,255,0.12), transparent 60%), #0e1116;
+  border: 1px solid var(--lp-border);
+  border-radius: 22px;
+}
+.open-eyebrow {
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--lp-accent-2); font-weight: 600;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+}
+.open-card h2 {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.open-card p {
+  font-size: 17px;
+  color: var(--lp-dim);
+  max-width: 600px;
+  margin: 0 auto 28px;
+}
+.open-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ----- Footer ----- */
+.lp-footer {
+  display: flex; justify-content: space-between;
+  padding: 30px 32px;
+  font-size: 13px;
+  color: var(--lp-mute);
+  border-top: 1px solid var(--lp-border);
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.lp-footer a { text-decoration: none; color: var(--lp-dim); }
+.lp-footer a:hover { color: var(--lp-fg); }
+
+/* ============================================================
+   Responsive — on narrow screens the sticky effect would feel
+   cramped, so we stack and disable sticky.
+   ============================================================ */
+@media (max-width: 900px) {
+  .lp-header { padding: 12px 18px; }
+  .lp-nav { display: none; }
+  .hero { padding: 40px 18px 80px; }
+  .hero-grid { grid-template-columns: 1fr; gap: 28px; }
+  .hero-sticky {
+    position: static;
+    min-height: auto;
+    padding: 20px 0;
+  }
+  .hero-img { max-width: 260px; }
+  .hero-copy { padding-top: 0; text-align: center; }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-cta { justify-content: center; }
+  .hero-meta { justify-content: center; }
+
+  .features { padding: 60px 18px 20px; }
+  .feature {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 48px 0;
+  }
+  .feature-sticky { position: static; min-height: auto; }
+  .feature-copy { padding-top: 0; text-align: center; }
+  .feature-copy p { margin-left: auto; margin-right: auto; }
+  .feature.feature-r .feature-sticky { order: 0; }
+  .feature.feature-r .feature-copy   { order: 1; }
+
+  .languages, .open { padding: 60px 18px; }
+  .open-card { padding: 40px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .hero-img { animation: none; }
+  .lp-btn { transition: none; }
+}

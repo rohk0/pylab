@@ -6,7 +6,7 @@ function renderLogin() {
   const sidebar = document.getElementById("sidebar");
   const main = document.getElementById("main");
 
-  const next = new URLSearchParams(location.search).get("next") || "index.html";
+  const next = new URLSearchParams(location.search).get("next") || "dashboard.html";
 
   sidebar.innerHTML = `
     <div class="sb-header">Sign in</div>

@@ -3,37 +3,183 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>pylab — learn Python</title>
+  <title>pylab — learn to code with an AI tutor</title>
+  <meta name="description" content="Learn Python, JavaScript, and more in your browser. Real code execution, an AI tutor on every exercise, no install required." />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0e1116" />
   <link rel="icon" type="image/png" href="icons/logo.png" />
   <link rel="apple-touch-icon" href="icons/logo.png" />
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/polish.css" />
+  <link rel="stylesheet" href="css/landing.css" />
 </head>
-<body>
-  <script src="js/state.js"></script>
-  <script src="js/languages.js"></script>
-  <script src="js/codeblock.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script type="module" src="js/firebase.js"></script>
-  <script src="js/ai/core.js"></script>
-  <script src="js/ai/prompts.js"></script>
-  <script src="js/ai/tracker.js"></script>
-  <script src="js/ai/panel.js"></script>
-  <script src="js/data/lessons.js"></script>
-  <script src="js/data/challenges.js"></script>
-  <script src="js/data/reference.js"></script>
-  <script src="js/data/projects.js"></script>
-  <script src="js/data/curricula.js"></script>
-  <script src="js/data/lesson-bodies.js"></script>
-  <script src="js/shell.js"></script>
-  <script src="js/pwa.js"></script>
-  <script src="js/pages/dashboard.js"></script>
+<body class="landing">
+  <!-- Skip straight to the dashboard for returning users so they
+       don't have to scroll past marketing every time they open the site. -->
   <script>
-    buildShell("dashboard");
-    renderDashboard();
+    try {
+      const me = JSON.parse(localStorage.getItem("pylab.auth.v1") || "null");
+      if (me && me.email) location.replace("dashboard.html");
+    } catch {}
   </script>
+
+  <header class="lp-header">
+    <a class="lp-brand" href="./">
+      <img src="icons/logo.png" alt="" width="28" height="28" />
+      <span>pylab</span>
+    </a>
+    <nav class="lp-nav" aria-label="Primary">
+      <a href="#features">Features</a>
+      <a href="#languages">Languages</a>
+      <a href="#open">Open source</a>
+    </nav>
+    <div class="lp-actions">
+      <a class="lp-btn ghost" href="login.html?next=dashboard.html">Sign in</a>
+      <a class="lp-btn primary" href="dashboard.html">Start learning</a>
+    </div>
+  </header>
+
+  <!-- Hero — the .hero-sticky logo stays pinned at the top of the
+       viewport while .hero-copy scrolls past, courtesy of position:
+       sticky on the hero column. -->
+  <section class="hero">
+    <div class="hero-grid">
+      <div class="hero-sticky">
+        <img src="icons/logo.png" alt="pylab logo" class="hero-img" />
+      </div>
+      <div class="hero-copy">
+        <div class="hero-eyebrow">A coding workbench in your browser</div>
+        <h1 class="hero-title">Learn to code.<br/>Like a developer would.</h1>
+        <p class="hero-sub">
+          Real Python, JavaScript, Java, C++ — running in the browser. An AI tutor that
+          gives you progressive hints, code reviews, and explanations on every exercise.
+          No install. No setup. Free.
+        </p>
+        <div class="hero-cta">
+          <a class="lp-btn primary big" href="dashboard.html">Start learning →</a>
+          <a class="lp-btn ghost big" href="playground.html">Open playground</a>
+        </div>
+        <div class="hero-meta">
+          <span>9 languages</span><span class="dot"></span>
+          <span>Hundreds of exercises</span><span class="dot"></span>
+          <span>Works offline</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features — three rows, each with a sticky visual that holds
+       while the copy scrolls past. -->
+  <section class="features" id="features">
+    <div class="lp-section-tag">What's inside</div>
+
+    <article class="feature feature-r">
+      <div class="feature-sticky">
+        <div class="feature-card editor">
+          <div class="card-bar"><span></span><span></span><span></span><div class="card-file">scratch.py</div></div>
+          <pre class="card-code"><span class="kw">def</span> <span class="fn">greet</span>(name):
+    <span class="kw">return</span> <span class="str">f"hi, {name}"</span>
+
+<span class="fn">print</span>(greet(<span class="str">"world"</span>))</pre>
+          <div class="card-out">hi, world</div>
+        </div>
+      </div>
+      <div class="feature-copy">
+        <div class="feature-eyebrow">Real execution</div>
+        <h2>Python that actually runs.</h2>
+        <p>
+          Code in the editor, hit Run, see real output. Powered by Pyodide — a real
+          Python interpreter compiled to WebAssembly. Same for JavaScript, HTML, CSS,
+          and SQL — all native in the browser.
+        </p>
+      </div>
+    </article>
+
+    <article class="feature">
+      <div class="feature-copy">
+        <div class="feature-eyebrow">AI tutor</div>
+        <h2>Help that meets you where you are.</h2>
+        <p>
+          Stuck? Ask for a hint and get a small nudge. Stuck more? Get a stronger one.
+          Pass? Get a senior-dev-style code review. The tutor knows what language you're
+          on, what topic you're learning, and what you've struggled with before.
+        </p>
+      </div>
+      <div class="feature-sticky">
+        <div class="feature-card chat">
+          <div class="chat-row you"><b>you</b> Why doesn't my loop stop?</div>
+          <div class="chat-row ai"><b>pylab</b> Look at line 3 — what value does <code>i</code> need to reach for the <code>while</code> to exit? You're updating <code>x</code> instead.</div>
+          <div class="chat-row you"><b>you</b> Oh. I want <code>i += 1</code>.</div>
+          <div class="chat-row ai"><b>pylab</b> Exactly. Try it.</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="feature feature-r">
+      <div class="feature-sticky">
+        <div class="feature-card langs">
+          <div class="lang-chip"><b>Py</b> Python</div>
+          <div class="lang-chip"><b>JS</b> JavaScript</div>
+          <div class="lang-chip"><b>TS</b> TypeScript</div>
+          <div class="lang-chip"><b>Ja</b> Java</div>
+          <div class="lang-chip"><b>C</b>  C</div>
+          <div class="lang-chip"><b>C++</b>C++</div>
+          <div class="lang-chip"><b>SQ</b> SQL</div>
+          <div class="lang-chip"><b>&lt;/&gt;</b> HTML</div>
+          <div class="lang-chip"><b>{}</b> CSS</div>
+        </div>
+      </div>
+      <div class="feature-copy">
+        <div class="feature-eyebrow">9 languages</div>
+        <h2>One workbench. Every language.</h2>
+        <p>
+          Switch from Python to JavaScript with a tab. The editor, the AI tutor, the code
+          blocks all adapt. Curated curricula for Python, JS, Java, HTML, CSS, and C++ —
+          plus on-demand AI-authored lessons for anything else.
+        </p>
+      </div>
+    </article>
+  </section>
+
+  <section class="languages" id="languages">
+    <div class="lp-section-tag">Pick a language</div>
+    <h2 class="lp-section-h">Start anywhere.</h2>
+    <div class="lang-grid">
+      <a class="lang-tile" href="lessons.html">Python</a>
+      <a class="lang-tile" href="lessons.html">JavaScript</a>
+      <a class="lang-tile" href="lessons.html">TypeScript</a>
+      <a class="lang-tile" href="lessons.html">Java</a>
+      <a class="lang-tile" href="lessons.html">C</a>
+      <a class="lang-tile" href="lessons.html">C++</a>
+      <a class="lang-tile" href="lessons.html">SQL</a>
+      <a class="lang-tile" href="lessons.html">HTML</a>
+      <a class="lang-tile" href="lessons.html">CSS</a>
+    </div>
+  </section>
+
+  <section class="open" id="open">
+    <div class="open-card">
+      <div class="open-eyebrow">Free and open source</div>
+      <h2>Yours to use. Yours to fork.</h2>
+      <p>
+        pylab is a static site. No server, no tracking. Bring your own AI key, or use
+        the bundled one. Source on GitHub — extend it, host your own, make it weirder.
+      </p>
+      <div class="open-cta">
+        <a class="lp-btn primary big" href="dashboard.html">Get started</a>
+        <a class="lp-btn ghost big" href="https://github.com/rohk0/pylab" target="_blank" rel="noopener">View on GitHub →</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="lp-footer">
+    <div>© pylab · open source on <a href="https://github.com/rohk0/pylab" target="_blank" rel="noopener">GitHub</a></div>
+    <div>
+      <a href="dashboard.html">Dashboard</a> ·
+      <a href="playground.html">Playground</a> ·
+      <a href="lessons.html">Lessons</a> ·
+      <a href="login.html?next=dashboard.html">Sign in</a>
+    </div>
+  </footer>
+
+  <script src="js/pwa.js"></script>
 </body>
 </html>

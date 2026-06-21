@@ -15,15 +15,17 @@
 //     caches get evicted on activate
 // ============================================================
 
-const CACHE_VERSION = "pylab-v2";
+const CACHE_VERSION = "pylab-v3";
 
 const PRECACHE = [
   "./",
   "./index.html",
+  "./dashboard.html",
   "./manifest.json",
   "./css/main.css",
   "./css/ai.css",
   "./css/polish.css",
+  "./css/landing.css",
   "./js/state.js",
   "./js/languages.js",
   "./js/codeblock.js",

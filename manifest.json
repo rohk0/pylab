@@ -2,7 +2,7 @@
   "name": "pylab — learn to code",
   "short_name": "pylab",
   "description": "Learn Python, JavaScript, and more in your browser. AI tutor, real code execution, no install required.",
-  "start_url": "./index.html",
+  "start_url": "./dashboard.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

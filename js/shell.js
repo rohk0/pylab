@@ -4,7 +4,7 @@
 // ============================================================
 
 const NAV = [
-  { id: "dashboard",  href: "index.html",      label: "Dashboard",  icon: iconHome,    activity: true },
+  { id: "dashboard",  href: "dashboard.html",  label: "Dashboard",  icon: iconHome,    activity: true },
   { id: "lessons",    href: "lessons.html",    label: "Lessons",    icon: iconBook,    activity: true },
   { id: "challenges", href: "challenges.html", label: "Challenges", icon: iconFlag,    activity: true },
   { id: "playground", href: "playground.html", label: "Playground", icon: iconTerm,    activity: true },
@@ -128,7 +128,7 @@ function buildShell(activeId) {
         <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <a href="index.html" class="brand" aria-label="pylab home" style="text-decoration:none;color:inherit;">
+        <a href="dashboard.html" class="brand" aria-label="pylab home" style="text-decoration:none;color:inherit;">
           <img src="icons/logo.png" alt="" class="logo-img" width="22" height="22"
                style="display:block;border-radius:5px;object-fit:cover;" />
           <div class="brand-name"><b>pylab</b> · learn</div>
