@@ -857,6 +857,327 @@ print("CHECK_OK")`,
         ],
       }
     ],
+  },
+
+  // ----------------------------------------------------------------
+  // Unit 10: Toolbox — Python's standard library
+  // The "batteries included" parts learners reach for daily.
+  // ----------------------------------------------------------------
+  {
+    id: "u-toolbox",
+    title: "Toolbox",
+    summary: "Random, datetime, collections, itertools — the daily-driver stdlib.",
+    icon: "10",
+    lessons: [
+      {
+        id: "l-std-random",
+        title: "Randomness",
+        summary: "Dice rolls, shuffles, and reproducible randomness with seed.",
+        prose: `
+# The random module
+
+Python's \`random\` module gives you cheap, fast pseudo-randomness.
+The functions you'll reach for 90% of the time:
+
+\`\`\`python
+import random
+
+random.randint(1, 6)        # 1, 2, 3, 4, 5, or 6 (both ends inclusive)
+random.random()             # float in [0.0, 1.0)
+random.choice(["a","b","c"])# pick one
+random.shuffle(my_list)     # in-place
+random.sample(my_list, 3)   # 3 unique picks without replacement
+\`\`\`
+
+For tests or reproducibility, **seed** the generator first:
+
+\`\`\`python
+random.seed(42)
+# Now every random.* call is deterministic across runs.
+\`\`\`
+
+Turtle graphics need a desktop window so they can't run in the browser,
+but random walks, dice games, and procedural worlds all do.
+        `,
+        exercises: [
+          {
+            prompt: "Write roll(sides) that returns a random integer between 1 and sides (inclusive). Use random.randint.",
+            starter: "import random\n\ndef roll(sides):\n    # TODO\n    pass\n",
+            check: `import random
+random.seed(0)
+xs = [roll(6) for _ in range(200)]
+assert all(isinstance(x, int) for x in xs)
+assert all(1 <= x <= 6 for x in xs)
+assert set(xs) == {1,2,3,4,5,6}, "Should cover every face after 200 rolls"
+random.seed(0)
+assert isinstance(roll(20), int)
+print("CHECK_OK")`,
+            hints: ["random.randint(a, b) — both ends are inclusive"],
+            solution: 'import random\n\ndef roll(sides):\n    return random.randint(1, sides)\n\nprint(roll(6))'
+          }
+        ],
+      },
+      {
+        id: "l-std-datetime",
+        title: "Dates and times",
+        summary: "Today, deltas, formatting, parsing.",
+        prose: `
+# datetime — dates without tears
+
+\`\`\`python
+from datetime import date, datetime, timedelta
+
+today = date.today()
+birthday = date(2008, 5, 12)
+
+age_days = (today - birthday).days        # subtracting dates gives a timedelta
+in_a_week = today + timedelta(days=7)
+
+# Formatting / parsing strings
+text = today.strftime("%Y-%m-%d")          # "2026-06-21"
+parsed = datetime.strptime("2024-01-15", "%Y-%m-%d").date()
+\`\`\`
+
+Two gotchas:
+
+- \`date\` (no time) and \`datetime\` (date + time) are different types.
+- Subtracting two \`date\` objects gives a \`timedelta\`. Read its \`.days\`.
+        `,
+        exercises: [
+          {
+            prompt: "Write days_between(d1, d2) that returns the absolute number of days between two date objects.",
+            starter: "from datetime import date\n\ndef days_between(d1, d2):\n    # TODO\n    pass\n",
+            check: `from datetime import date
+assert days_between(date(2024,1,1), date(2024,1,10)) == 9
+assert days_between(date(2024,1,10), date(2024,1,1)) == 9
+assert days_between(date(2024,1,1), date(2024,1,1)) == 0
+assert days_between(date(2020,1,1), date(2024,1,1)) == 1461  # 2020 was a leap year
+print("CHECK_OK")`,
+            hints: ["Subtract the dates — the result has a .days attribute", "abs() handles either order"],
+            solution: 'from datetime import date\n\ndef days_between(d1, d2):\n    return abs((d1 - d2).days)\n\nprint(days_between(date(2024,1,1), date(2024,12,31)))'
+          }
+        ],
+      },
+      {
+        id: "l-std-collections",
+        title: "Counter & defaultdict",
+        summary: "Stop reinventing histograms.",
+        prose: `
+# collections — the dict's smarter cousins
+
+**Counter** counts things. It's basically a dict with batteries:
+
+\`\`\`python
+from collections import Counter
+
+words = "the cat sat on the mat".split()
+c = Counter(words)
+print(c)                # Counter({'the': 2, 'cat': 1, 'sat': 1, 'on': 1, 'mat': 1})
+print(c.most_common(2)) # [('the', 2), ('cat', 1)]
+\`\`\`
+
+**defaultdict** stops the \`if key not in d: d[key] = []\` dance:
+
+\`\`\`python
+from collections import defaultdict
+
+groups = defaultdict(list)
+for word in ["apple", "ant", "banana"]:
+    groups[word[0]].append(word)
+# groups → {'a': ['apple', 'ant'], 'b': ['banana']}
+\`\`\`
+        `,
+        exercises: [
+          {
+            prompt: "Write most_common_word(text) returning the most common word (case-insensitive, split on whitespace).",
+            starter: "from collections import Counter\n\ndef most_common_word(text):\n    # TODO\n    pass\n",
+            check: `from collections import Counter
+assert most_common_word("the cat sat on the mat") == "the"
+assert most_common_word("Hello hello WORLD") == "hello"
+assert most_common_word("one") == "one"
+print("CHECK_OK")`,
+            hints: ["Lowercase the text first", ".most_common(1) returns a list of (word, count) tuples"],
+            solution: 'from collections import Counter\n\ndef most_common_word(text):\n    c = Counter(text.lower().split())\n    return c.most_common(1)[0][0]\n\nprint(most_common_word("the the cat"))'
+          }
+        ],
+      },
+      {
+        id: "l-std-itertools",
+        title: "itertools tricks",
+        summary: "Combinations, permutations, chains, and other power tools.",
+        prose: `
+# itertools — the iterator algebra
+
+\`\`\`python
+from itertools import combinations, permutations, product, chain, count, cycle
+
+list(combinations([1,2,3], 2))   # [(1,2), (1,3), (2,3)]   — order doesn't matter
+list(permutations([1,2,3], 2))   # [(1,2),(1,3),(2,1),...] — order matters
+list(product([1,2], ["a","b"]))  # [(1,'a'),(1,'b'),(2,'a'),(2,'b')]
+list(chain([1,2], [3,4]))        # [1,2,3,4]
+# count() and cycle() are infinite — only use them inside loops with a break.
+\`\`\`
+
+These are written in C and run nearly as fast as a hand-rolled loop in C,
+so they're not just elegance — they're often the fastest option.
+        `,
+        exercises: [
+          {
+            prompt: "Write pairs(items) returning a list of all 2-element tuples (i,j) where i comes before j in items.",
+            starter: "from itertools import combinations\n\ndef pairs(items):\n    # TODO\n    pass\n",
+            check: `from itertools import combinations
+assert pairs([1,2,3]) == [(1,2),(1,3),(2,3)]
+assert pairs([]) == []
+assert pairs([1]) == []
+assert pairs(["a","b","c","d"]) == [("a","b"),("a","c"),("a","d"),("b","c"),("b","d"),("c","d")]
+print("CHECK_OK")`,
+            hints: ["combinations(items, 2) yields tuples", "Wrap in list() to get a list"],
+            solution: 'from itertools import combinations\n\ndef pairs(items):\n    return list(combinations(items, 2))\n\nprint(pairs([1,2,3,4]))'
+          }
+        ],
+      }
+    ],
+  },
+
+  // ----------------------------------------------------------------
+  // Unit 11: Text & Patterns
+  // Regex, JSON, parsing — the stuff every real Python job touches.
+  // ----------------------------------------------------------------
+  {
+    id: "u-text",
+    title: "Text & Patterns",
+    summary: "Regex, JSON, and parsing real-world text.",
+    icon: "11",
+    lessons: [
+      {
+        id: "l-text-regex",
+        title: "Regex basics",
+        summary: "Searching for patterns with the re module.",
+        prose: `
+# Regular expressions
+
+A regex is a tiny language for describing patterns in text. The cheat sheet:
+
+| Pattern | Matches |
+|---------|---------|
+| \`.\` | any character (except newline) |
+| \`\\d\` | a digit \`0-9\` |
+| \`\\w\` | a "word" character (letters, digits, _) |
+| \`\\s\` | whitespace |
+| \`+\` | one or more of the previous |
+| \`*\` | zero or more |
+| \`?\` | zero or one |
+| \`[abc]\` | any of a, b, or c |
+| \`^\` / \`$\` | start / end of line |
+
+\`\`\`python
+import re
+
+re.search(r"\\d+", "I have 12 apples").group()   # "12"
+re.findall(r"\\w+", "Hello, world!")              # ["Hello", "world"]
+re.sub(r"\\s+", "-", "a   b   c")                 # "a-b-c"
+\`\`\`
+
+Always prefix patterns with \`r\` (raw string) so \`\\d\` isn't interpreted as an escape.
+        `,
+        exercises: [
+          {
+            prompt: "Write find_numbers(text) that returns a list of all numbers in the string (as strings, in order).",
+            starter: "import re\n\ndef find_numbers(text):\n    # TODO\n    pass\n",
+            check: `import re
+assert find_numbers("I have 3 apples and 17 oranges") == ["3", "17"]
+assert find_numbers("no numbers here") == []
+assert find_numbers("1 2 3 4 5") == ["1","2","3","4","5"]
+assert find_numbers("year 2024 and 1999") == ["2024", "1999"]
+print("CHECK_OK")`,
+            hints: ["re.findall returns a list", "Use r\"\\d+\" to match one or more digits"],
+            solution: 'import re\n\ndef find_numbers(text):\n    return re.findall(r"\\d+", text)\n\nprint(find_numbers("3 cats and 12 dogs"))'
+          }
+        ],
+      },
+      {
+        id: "l-text-regex-groups",
+        title: "Capture groups",
+        summary: "Pull pieces out of a pattern with parentheses.",
+        prose: `
+# Capture groups
+
+Parentheses in a regex pull out the matched piece:
+
+\`\`\`python
+import re
+
+m = re.match(r"(\\d{4})-(\\d{2})-(\\d{2})", "2024-01-15")
+m.group(0)   # "2024-01-15" — the whole match
+m.group(1)   # "2024"
+m.groups()   # ("2024", "01", "15")
+\`\`\`
+
+For "find all occurrences" use \`findall\` — it returns tuples when there are
+multiple groups:
+
+\`\`\`python
+re.findall(r"(\\w+)=(\\w+)", "a=1 b=2 c=3")
+# [('a', '1'), ('b', '2'), ('c', '3')]
+\`\`\`
+        `,
+        exercises: [
+          {
+            prompt: "Write parse_date(s) that parses a string like '2024-01-15' into a tuple (year, month, day) of ints.",
+            starter: "import re\n\ndef parse_date(s):\n    # TODO\n    pass\n",
+            check: `import re
+assert parse_date("2024-01-15") == (2024, 1, 15)
+assert parse_date("1999-12-31") == (1999, 12, 31)
+assert parse_date("2000-02-29") == (2000, 2, 29)
+print("CHECK_OK")`,
+            hints: ["Match with three capture groups", "Convert each group to int"],
+            solution: 'import re\n\ndef parse_date(s):\n    m = re.match(r"(\\d{4})-(\\d{2})-(\\d{2})", s)\n    y, mo, d = m.groups()\n    return (int(y), int(mo), int(d))\n\nprint(parse_date("2024-12-25"))'
+          }
+        ],
+      },
+      {
+        id: "l-text-json",
+        title: "JSON",
+        summary: "Reading and writing JSON — the universal data format.",
+        prose: `
+# JSON
+
+Every API on the internet speaks JSON. Python's \`json\` module turns it into
+plain dicts and lists.
+
+\`\`\`python
+import json
+
+# String → Python
+data = json.loads('{"name": "Alice", "age": 30}')
+print(data["name"])   # "Alice"
+
+# Python → string
+out = json.dumps({"x": 1, "y": [2, 3]})
+print(out)            # '{"x": 1, "y": [2, 3]}'
+
+# Pretty-print with indentation
+print(json.dumps(data, indent=2))
+\`\`\`
+
+Naming gotcha: \`json.loads\` (load **s**tring) vs \`json.load\` (load from a **f**ile).
+        `,
+        exercises: [
+          {
+            prompt: "Given a JSON string of an array of user objects with name and age fields, write adults(text) returning the list of names where age >= 18, in original order.",
+            starter: "import json\n\ndef adults(text):\n    # TODO\n    pass\n",
+            check: `import json
+assert adults('[{"name":"Alice","age":30},{"name":"Bob","age":15}]') == ["Alice"]
+assert adults('[{"name":"Carol","age":18}]') == ["Carol"]
+assert adults('[]') == []
+assert adults('[{"name":"Dan","age":17},{"name":"Eve","age":40},{"name":"Frank","age":17}]') == ["Eve"]
+print("CHECK_OK")`,
+            hints: ["json.loads(text) gives you a list of dicts", "A list comprehension over the parsed list"],
+            solution: 'import json\n\ndef adults(text):\n    users = json.loads(text)\n    return [u["name"] for u in users if u["age"] >= 18]\n\nprint(adults(\'[{"name":"Alice","age":30}]\'))'
+          }
+        ],
+      }
+    ],
   }
 ];
 
