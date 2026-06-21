@@ -669,6 +669,194 @@ print(sorted(words, key=lambda w: len(w)))
         ],
       }
     ],
+  },
+
+  // ----------------------------------------------------------------
+  // Unit 9: Coding AI / Machine Learning
+  // Built entirely from scratch in pure Python — no external libs.
+  // Pyodide can install scikit-learn / numpy via micropip, but the
+  // point of this unit is to demystify what the libraries do.
+  // ----------------------------------------------------------------
+  {
+    id: "u-ml",
+    title: "Coding AI",
+    summary: "Build the machine-learning building blocks from scratch.",
+    icon: "09",
+    lessons: [
+      {
+        id: "l-ml-intro",
+        title: "What is Machine Learning?",
+        summary: "Predictors, features, labels — and the simplest model: a rule.",
+        prose: `
+# What is Machine Learning?
+
+A machine learning model is just **a program that turns input into a prediction**.
+The input is a *feature*; the prediction is a *label*. Training means tuning
+the program so its predictions match real labels.
+
+Before reaching for fancy algorithms, the simplest model is a hand-written rule.
+A "rule-based" model is still a predictor — it just doesn't learn.
+
+\`\`\`python
+def classify(temp):
+    if temp >= 80:
+        return "hot"
+    elif temp < 60:
+        return "cold"
+    return "mild"
+
+print(classify(75))   # mild
+print(classify(95))   # hot
+\`\`\`
+
+Real ML replaces those hand-typed thresholds with numbers an algorithm finds for you.
+Same shape — just learned instead of typed.
+        `,
+        exercises: [
+          {
+            prompt: "Write predict(score) that returns 'pass' if score >= 60, otherwise 'fail'. This is your first model: a one-rule classifier.",
+            starter: "def predict(score):\n    # TODO: return 'pass' or 'fail'\n    pass\n",
+            check: `assert predict(60) == "pass"
+assert predict(59) == "fail"
+assert predict(100) == "pass"
+assert predict(0) == "fail"
+print("CHECK_OK")`,
+            hints: ["Use an if/else", "60 is the cutoff — equal counts as pass"],
+            solution: 'def predict(score):\n    return "pass" if score >= 60 else "fail"\n\nprint(predict(75))'
+          }
+        ],
+      },
+      {
+        id: "l-ml-distance",
+        title: "Distance & similarity",
+        summary: "Euclidean distance — the foundation of k-nearest-neighbors.",
+        prose: `
+# How do we measure "close"?
+
+The simplest *learning* algorithm is **k-nearest neighbors (kNN)**:
+to classify a new point, look at the *k* closest training points and copy
+their label.
+
+"Closest" usually means **Euclidean distance** — straight-line distance:
+sum the squared differences of each coordinate, then take the square root.
+
+\`\`\`python
+import math
+
+def distance(a, b):
+    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+print(distance((0, 0), (3, 4)))   # 5.0  (the 3-4-5 right triangle)
+\`\`\`
+
+Once you can measure distance, kNN is one more loop: sort all training points
+by distance to the query, take the closest k, return the majority label.
+        `,
+        exercises: [
+          {
+            prompt: "Implement distance(a, b) returning Euclidean distance. Both points are lists/tuples of the same length.",
+            starter: "import math\n\ndef distance(a, b):\n    # TODO\n    pass\n",
+            check: `import math
+assert distance((0,0), (3,4)) == 5
+assert abs(distance((1,2,3), (4,6,3)) - 5.0) < 1e-9
+assert distance((0,), (0,)) == 0
+assert abs(distance([1,1], [4,5]) - 5.0) < 1e-9
+print("CHECK_OK")`,
+            hints: ["zip(a, b) pairs up coordinates", "Square the differences, sum, then sqrt"],
+            solution: 'import math\n\ndef distance(a, b):\n    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))\n\nprint(distance((0,0), (3,4)))'
+          }
+        ],
+      },
+      {
+        id: "l-ml-loss",
+        title: "Measuring error",
+        summary: "Mean squared error — how models know how wrong they are.",
+        prose: `
+# How do you score a wrong prediction?
+
+A model that predicts \`5\` when the truth was \`4\` is a little wrong.
+A model that predicts \`50\` is *very* wrong. We need a number that captures this.
+
+**Mean squared error (MSE)** is the standard:
+
+\`\`\`python
+def mse(predictions, actuals):
+    return sum((p - a) ** 2 for p, a in zip(predictions, actuals)) / len(predictions)
+\`\`\`
+
+Three nice properties:
+
+- **Squaring** makes big mistakes count disproportionately more.
+- **Squaring** also drops the sign — too-low and too-high are equally bad.
+- **Averaging** means MSE doesn't grow with the dataset size.
+
+Training a model means: change its parameters in whatever direction makes MSE smaller.
+That's literally what gradient descent does.
+        `,
+        exercises: [
+          {
+            prompt: "Implement mse(predictions, actuals) returning the mean squared error.",
+            starter: "def mse(predictions, actuals):\n    # TODO\n    pass\n",
+            check: `assert mse([1,2,3], [1,2,3]) == 0
+assert mse([1,2,3], [2,3,4]) == 1.0
+assert abs(mse([0,0], [3,4]) - 12.5) < 1e-9
+assert abs(mse([10], [20]) - 100) < 1e-9
+print("CHECK_OK")`,
+            hints: ["zip(predictions, actuals) gives (p, a) pairs", "Square the differences, sum, divide by the count"],
+            solution: 'def mse(predictions, actuals):\n    return sum((p - a) ** 2 for p, a in zip(predictions, actuals)) / len(predictions)\n\nprint(mse([1,2,3], [2,3,4]))'
+          }
+        ],
+      },
+      {
+        id: "l-ml-neuron",
+        title: "A neuron from scratch",
+        summary: "Sigmoid + a single neuron — the building block of every neural net.",
+        prose: `
+# What's actually inside a neural network?
+
+A "neuron" is two steps:
+
+1. **Weighted sum** of inputs: \`z = w1*x1 + w2*x2 + ... + bias\`
+2. **Activation**: squish \`z\` into a useful range. The classic activation is
+   the *sigmoid*: \`σ(z) = 1 / (1 + e^-z)\`. It maps any real number to a value
+   between 0 and 1, which makes it useful for "is this true?"-style outputs.
+
+\`\`\`python
+import math
+
+def sigmoid(z):
+    return 1 / (1 + math.exp(-z))
+
+def neuron(inputs, weights, bias):
+    z = sum(i * w for i, w in zip(inputs, weights)) + bias
+    return sigmoid(z)
+
+# "Should I take an umbrella?" — features: [chance_of_rain, low_temp_flag]
+print(neuron([0.9, 1.0], [3.0, 2.0], -2.0))   # ~0.97 → yes
+print(neuron([0.1, 0.0], [3.0, 2.0], -2.0))   # ~0.15 → no
+\`\`\`
+
+Stack a few hundred of these into layers, train them with gradient descent,
+and you've got the foundation of every modern AI system — including the model
+answering your messages right now.
+        `,
+        exercises: [
+          {
+            prompt: "Implement sigmoid(z) = 1 / (1 + e^-z). The math module gives you math.exp.",
+            starter: "import math\n\ndef sigmoid(z):\n    # TODO\n    pass\n",
+            check: `import math
+assert abs(sigmoid(0) - 0.5) < 1e-9
+assert sigmoid(100) > 0.99
+assert sigmoid(-100) < 0.01
+assert abs(sigmoid(1) - 0.7310585786) < 1e-6
+assert abs(sigmoid(-1) - 0.2689414214) < 1e-6
+print("CHECK_OK")`,
+            hints: ["math.exp(-z) gives e^(-z)", "Watch the parens — denominator is (1 + exp(-z))"],
+            solution: 'import math\n\ndef sigmoid(z):\n    return 1 / (1 + math.exp(-z))\n\nprint(sigmoid(0))\nprint(sigmoid(1))'
+          }
+        ],
+      }
+    ],
   }
 ];
 
