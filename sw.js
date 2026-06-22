@@ -15,7 +15,7 @@
 //     caches get evicted on activate
 // ============================================================
 
-const CACHE_VERSION = "pylab-v3";
+const CACHE_VERSION = "pylab-v4";
 
 const PRECACHE = [
   "./",

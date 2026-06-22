@@ -1,6 +1,32 @@
 // Dashboard — XP, level, streak heatmap, recent activity, next lesson.
 
 function renderDashboard() {
+  try {
+    renderDashboardImpl();
+  } catch (e) {
+    console.error("[dashboard] render failed:", e);
+    const main = document.getElementById("main");
+    if (main) {
+      main.innerHTML = `
+        <div class="tabs"><div class="tab active">Dashboard</div></div>
+        <div class="page-narrow">
+          <div class="h1">Couldn't load the dashboard.</div>
+          <div class="feedback bad" style="margin-top:14px;">
+            <b>${escapeHTML(e.message || String(e))}</b>
+            <div style="margin-top:6px;font-family:var(--font-mono);font-size:11px;color:var(--fg-mute);white-space:pre-wrap;">${escapeHTML((e.stack || "").split("\n").slice(0, 3).join("\n"))}</div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" onclick="localStorage.removeItem('pylab.whatsnew.dismissed'); localStorage.removeItem('pylab.companion'); location.reload();">Clear caches and retry</button>
+            <button class="btn danger" onclick="if(confirm('Reset all local progress?')){State.reset();}">Reset progress</button>
+            <a class="btn" href="lessons.html">Open lessons</a>
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderDashboardImpl() {
   const sidebar = document.getElementById("sidebar");
   const main = document.getElementById("main");
 
@@ -236,7 +262,10 @@ const WHATS_NEW = [
 ];
 function whatsNewCardHTML() {
   let dismissed = {};
-  try { dismissed = JSON.parse(localStorage.getItem("pylab.whatsnew.dismissed") || "{}"); } catch {}
+  try {
+    const parsed = JSON.parse(localStorage.getItem("pylab.whatsnew.dismissed") || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) dismissed = parsed;
+  } catch {}
   const items = WHATS_NEW.filter(w => !dismissed[w.id]);
   if (!items.length) return "";
   const top = items[0];

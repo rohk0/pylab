@@ -28,16 +28,27 @@
   });
 
   // Merge an incoming partial state with our defaults so we never
-  // leave required fields undefined or null. Object spread alone
-  // doesn't handle the null case (null overrides defaults), so we
-  // sweep through and replace falsy values for object/array fields.
+  // leave required fields undefined, null, or wrong-typed. Object
+  // spread alone doesn't handle the null case (null overrides
+  // defaults), and a Firestore round-trip can shape-shift fields,
+  // so we sweep through and replace anything that doesn't match the
+  // expected type.
   function withDefaults(incoming) {
     const d = defaults();
     const merged = { ...d, ...(incoming || {}) };
     merged.settings = { ...d.settings, ...((incoming && incoming.settings) || {}) };
-    // Repair fields where null/undefined would crash downstream code.
     for (const key of Object.keys(d)) {
-      if (merged[key] == null) merged[key] = d[key];
+      const expect = d[key];
+      const got = merged[key];
+      if (got == null) { merged[key] = expect; continue; }
+      if (Array.isArray(expect) && !Array.isArray(got)) { merged[key] = expect; continue; }
+      if (expect && typeof expect === "object" && !Array.isArray(expect)
+          && (typeof got !== "object" || Array.isArray(got))) {
+        merged[key] = expect; continue;
+      }
+      if (typeof expect !== "object" && typeof got === "object") {
+        merged[key] = expect; continue;
+      }
     }
     return merged;
   }
