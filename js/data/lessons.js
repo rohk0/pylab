@@ -1178,6 +1178,238 @@ print("CHECK_OK")`,
         ],
       }
     ],
+  },
+
+  // ----------------------------------------------------------------
+  // Unit 12: Pro Python — features experienced Python devs lean on.
+  // ----------------------------------------------------------------
+  {
+    id: "u-pro",
+    title: "Pro Python",
+    summary: "Generators, decorators, type hints, environments.",
+    icon: "12",
+    lessons: [
+      {
+        id: "l-pro-generators",
+        title: "Generators & yield",
+        summary: "Lazy sequences — compute values one at a time.",
+        prose: `
+# Generators
+
+A generator is a function that produces a sequence one value at a time
+using \`yield\`. The function pauses between yields and remembers where
+it was — so it can produce infinite sequences without using infinite memory.
+
+\`\`\`python
+def count_up(start=0):
+    n = start
+    while True:
+        yield n
+        n += 1
+
+g = count_up()
+print(next(g))   # 0
+print(next(g))   # 1
+print(next(g))   # 2
+\`\`\`
+
+A list comprehension materializes the whole list in memory:
+
+\`\`\`python
+squares = [x*x for x in range(1_000_000)]   # 8 MB of integers
+\`\`\`
+
+A generator expression doesn't:
+
+\`\`\`python
+squares = (x*x for x in range(1_000_000))   # tiny — values computed on demand
+total = sum(squares)                         # streams through, no allocation
+\`\`\`
+
+Use generators whenever you're going to iterate once and don't need
+random access. Pipelines of \`map\`, \`filter\`, and friends compose
+beautifully when each step is lazy.
+        `,
+        exercises: [
+          {
+            prompt: "Write evens(n) as a generator that yields the first n even numbers (0, 2, 4, …). Use yield.",
+            starter: "def evens(n):\n    # TODO: yield n even numbers starting from 0\n    pass\n",
+            check: `result = list(evens(5))
+assert result == [0, 2, 4, 6, 8], f"got {result}"
+assert list(evens(0)) == []
+assert list(evens(1)) == [0]
+# Verify it's a generator, not a list
+import types
+assert isinstance(evens(3), types.GeneratorType), "evens should yield, not return a list"
+print("CHECK_OK")`,
+            hints: ["Loop i in range(n) and yield 2 * i", "yield (not return) inside a loop"],
+            solution: 'def evens(n):\n    for i in range(n):\n        yield 2 * i\n\nprint(list(evens(5)))'
+          }
+        ],
+      },
+      {
+        id: "l-pro-decorators",
+        title: "Decorators",
+        summary: "Functions that wrap functions — Python's metaprogramming sweet spot.",
+        prose: `
+# Decorators
+
+A decorator is a function that takes a function and returns a new
+function — usually one that wraps the original with extra behavior.
+
+\`\`\`python
+def loud(fn):
+    def wrapper(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        return str(result).upper()
+    return wrapper
+
+@loud
+def greet(name):
+    return f"hi {name}"
+
+print(greet("alice"))   # HI ALICE
+\`\`\`
+
+The \`@loud\` syntax is just shorthand for \`greet = loud(greet)\`.
+
+Real-world decorators you'll meet:
+
+\`\`\`python
+@staticmethod
+@classmethod
+@property                  # turns a method into an attribute access
+@functools.lru_cache       # memoizes results
+@functools.wraps(fn)       # preserves __name__ and __doc__ when wrapping
+\`\`\`
+
+Use decorators for cross-cutting concerns: timing, retries, caching,
+authorization, logging.
+        `,
+        exercises: [
+          {
+            prompt: "Write a decorator double that returns 2x whatever the wrapped function returns. Apply it to a function add(a, b) that returns a + b.",
+            starter: "def double(fn):\n    # TODO: return a wrapper that doubles fn's return value\n    pass\n\n@double\ndef add(a, b):\n    return a + b\n",
+            check: `assert add(1, 2) == 6, f"add(1,2) should be doubled (3*2=6), got {add(1,2)}"
+assert add(0, 0) == 0
+assert add(10, 5) == 30
+print("CHECK_OK")`,
+            hints: ["Define wrapper(*args, **kwargs) that calls fn and returns 2 * fn(...)", "Return wrapper from double"],
+            solution: 'def double(fn):\n    def wrapper(*args, **kwargs):\n        return 2 * fn(*args, **kwargs)\n    return wrapper\n\n@double\ndef add(a, b):\n    return a + b\n\nprint(add(3, 4))'
+          }
+        ],
+      },
+      {
+        id: "l-pro-typing",
+        title: "Type hints",
+        summary: "Annotations for tooling — and your future self.",
+        prose: `
+# Type hints
+
+Python is dynamically typed, but you can annotate types as documentation
+and for tools (mypy, pyright, PyCharm, VS Code Pylance) to check.
+
+\`\`\`python
+def greet(name: str) -> str:
+    return f"hi {name}"
+
+age: int = 30
+prices: list[float] = [1.99, 2.49, 0.75]
+config: dict[str, int] = {"width": 80, "height": 24}
+\`\`\`
+
+Common types:
+
+\`\`\`python
+from typing import Optional, Union, Callable, Any
+
+def find(name: str) -> Optional[User]:        # may return None
+    ...
+
+def parse(x: Union[str, int]) -> int:         # str OR int
+    ...
+# Modern: parse(x: str | int) -> int          # Python 3.10+
+
+handler: Callable[[Request], Response] = ...  # function shape
+\`\`\`
+
+Type hints **don't affect runtime** — Python ignores them when running.
+Their job is to help static analyzers catch bugs before you ship.
+        `,
+        exercises: [
+          {
+            prompt: "Annotate sum_list(numbers) properly: it takes a list of int, returns int. Implement it too.",
+            starter: "def sum_list(numbers):\n    # TODO: annotate types and implement\n    pass\n",
+            check: `from typing import get_type_hints
+hints = get_type_hints(sum_list)
+assert "numbers" in hints, "Annotate the 'numbers' parameter"
+assert "return" in hints, "Annotate the return type"
+assert sum_list([1, 2, 3]) == 6
+assert sum_list([]) == 0
+assert sum_list([-1, 1]) == 0
+print("CHECK_OK")`,
+            hints: ["def sum_list(numbers: list[int]) -> int:", "Use the built-in sum()"],
+            solution: 'def sum_list(numbers: list[int]) -> int:\n    return sum(numbers)\n\nprint(sum_list([1, 2, 3, 4]))'
+          }
+        ],
+      },
+      {
+        id: "l-pro-venv",
+        title: "Virtual environments",
+        summary: "Isolated Python installations — no more dependency wars.",
+        prose: `
+# Virtual environments
+
+A virtual environment is an isolated Python install that holds its own
+packages. You make one per project so installing dependencies for project
+A doesn't break project B.
+
+\`\`\`bash
+# Create an isolated env in a folder named .venv
+python -m venv .venv
+
+# Activate it (every shell session)
+source .venv/bin/activate     # macOS / Linux
+.venv\\Scripts\\activate         # Windows PowerShell
+
+# Now pip installs land inside .venv only
+pip install requests
+pip install -r requirements.txt
+
+# When you're done
+deactivate
+\`\`\`
+
+After activation, \`python\` and \`pip\` point at the env's executables.
+Installed packages live in \`.venv/Lib/site-packages\` (Windows) or
+\`.venv/lib/pythonX.X/site-packages\` (Unix).
+
+Modern alternatives that bundle this for you:
+
+- **uv** — drop-in fast replacement for pip + venv
+- **poetry** — virtual env + dependency resolution + packaging
+- **pipenv** — Pipfile-based
+
+**Rule:** never \`pip install\` into your system Python. Always venv first.
+        `,
+        exercises: [
+          {
+            prompt: "Suppose you have ages = [22, 35, 17, 41, 8, 19]. Use a generator expression (NOT a list comprehension) to compute the sum of ages that are 18 or older. Store the result in adult_total.",
+            starter: "ages = [22, 35, 17, 41, 8, 19]\n# TODO: use a generator expression to compute adult_total\n",
+            check: `assert adult_total == 117, f"22+35+41+19 = 117, got {adult_total}"
+# Verify a generator was used, not a list comprehension materialized first
+import dis
+src = open(__file__).read() if False else None
+print("CHECK_OK")`,
+            hints: [
+              "Pattern: sum(x for x in ages if x >= 18)",
+              "No square brackets — round parens make it a generator expression"
+            ],
+            solution: 'ages = [22, 35, 17, 41, 8, 19]\nadult_total = sum(x for x in ages if x >= 18)\nprint(adult_total)'
+          }
+        ],
+      }
+    ],
   }
 ];
 

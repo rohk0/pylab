@@ -83,8 +83,16 @@ function renderDashboardImpl() {
           })()}</div>
           <div class="subtle">Pick up where you left off, or grind a challenge.</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <a class="btn primary" href="lesson.html?id=${next.id}">Continue · ${escapeHTML(next.title)}</a>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${(doneLessons === 0 && State.data.xp === 0) ? `
+            <div class="first-visit-arrow" aria-hidden="true" title="First time? Click here to begin">
+              <span>Start here</span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h13M13 6l6 6-6 6"/>
+              </svg>
+            </div>
+          ` : ""}
+          <a class="btn primary ${doneLessons === 0 && State.data.xp === 0 ? "pulse-cta" : ""}" href="lesson.html?id=${next.id}">${doneLessons === 0 ? "Begin · " : "Continue · "}${escapeHTML(next.title)}</a>
           <a class="btn" href="playground.html">Open Playground</a>
         </div>
       </div>

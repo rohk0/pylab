@@ -369,3 +369,90 @@ select:focus-visible {
 
 /* Scroll-margin so anchor jumps don't tuck under sticky chrome */
 section[id], div[id] { scroll-margin-top: 56px; }
+
+/* ============================================================
+   First-visit "Start here" callout — only appears on the
+   dashboard for users with no progress yet.
+   ============================================================ */
+.first-visit-arrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.2px;
+  animation: arrowNudge 1.8s ease-in-out infinite;
+  user-select: none;
+}
+.first-visit-arrow svg { stroke: var(--accent); }
+@keyframes arrowNudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-4px); }
+}
+
+.pulse-cta {
+  position: relative;
+  box-shadow: 0 0 0 0 rgba(94, 177, 255, 0.6);
+  animation: pulseCta 2.2s ease-out infinite;
+}
+@keyframes pulseCta {
+  0%   { box-shadow: 0 0 0 0   rgba(94, 177, 255, 0.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(94, 177, 255, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(94, 177, 255, 0);   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .first-visit-arrow, .pulse-cta { animation: none; }
+}
+
+/* ============================================================
+   Keyboard shortcuts overlay — press ? to toggle.
+   ============================================================ */
+.kbshortcuts-backdrop {
+  position: fixed; inset: 0; z-index: 240;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: kbFade 0.15s ease-out;
+}
+@keyframes kbFade { from { opacity: 0; } to { opacity: 1; } }
+.kbshortcuts {
+  background: var(--bg-panel, #11161e);
+  border: 1px solid var(--border-strong, #2f3949);
+  border-radius: 10px;
+  width: 100%; max-width: 520px;
+  padding: 22px 24px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.kbshortcuts h3 {
+  margin: 0 0 14px;
+  font-size: 15px; font-weight: 600;
+  color: var(--fg-strong);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.kbshortcuts h3 button {
+  background: transparent; border: 0; color: var(--fg-mute);
+  font-size: 20px; cursor: pointer; padding: 0 4px;
+}
+.kbshortcut-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0;
+  font-size: 13px;
+}
+.kbshortcut-row + .kbshortcut-row { border-top: 1px solid var(--border); }
+.kbshortcut-row .label { color: var(--fg); }
+.kbshortcut-row kbd {
+  font-family: var(--font-mono);
+  background: var(--bg-elev-2, #1a2030);
+  border: 1px solid var(--border, #232a36);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  color: var(--fg-strong);
+}
+.kbshortcuts-hint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+}

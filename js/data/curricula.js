@@ -218,4 +218,124 @@ window.DEFAULT_CURRICULA = {
     ]},
   ],
 
+  rust: [
+    { id: "rust-basics", icon: "01", title: "Rust basics", summary: "Hello world, variables, mutability.", lessons: [
+      { id: "rust-hello",     title: "Hello, world",       summary: "Your first Rust program.",                topics: ["fn main", "println!"] },
+      { id: "rust-vars",      title: "let, mut, shadowing", summary: "Variables and the borrow checker's friend.", topics: ["let", "mut", "shadowing"] },
+      { id: "rust-types",     title: "Primitive types",    summary: "i32, u64, f64, bool, char, tuples, arrays.", topics: ["integers", "floats", "tuple", "array"] },
+    ]},
+    { id: "rust-flow", icon: "02", title: "Control flow", summary: "if, loops, match.", lessons: [
+      { id: "rust-if",        title: "if as expression",   summary: "Branches that return values.",            topics: ["if", "else if", "expression"] },
+      { id: "rust-loops",     title: "loop, while, for",   summary: "Three loop forms, when to use each.",     topics: ["loop", "while", "for", "range"] },
+      { id: "rust-match",     title: "match",              summary: "Pattern matching done right.",            topics: ["match", "pattern", "_"] },
+    ]},
+    { id: "rust-functions", icon: "03", title: "Functions", summary: "fn, params, return types.", lessons: [
+      { id: "rust-fn",        title: "Function basics",    summary: "fn keyword, parameters, return.",         topics: ["fn", "return", "-> type"] },
+      { id: "rust-closure",   title: "Closures",           summary: "Anonymous functions, capturing.",         topics: ["|x| x+1", "FnOnce", "FnMut"] },
+    ]},
+    { id: "rust-ownership", icon: "04", title: "Ownership", summary: "Rust's signature feature.", lessons: [
+      { id: "rust-own",       title: "Ownership rules",    summary: "Move semantics and the three rules.",     topics: ["move", "drop", "ownership"] },
+      { id: "rust-borrow",    title: "Borrowing & refs",   summary: "& and &mut — share without copying.",     topics: ["&T", "&mut T", "borrow checker"] },
+      { id: "rust-lifetime",  title: "Lifetimes intro",    summary: "'a annotations made approachable.",       topics: ["'a", "lifetime elision"] },
+    ]},
+    { id: "rust-data", icon: "05", title: "Structs & enums", summary: "Your own types.", lessons: [
+      { id: "rust-struct",    title: "Structs",            summary: "Named-field data carriers.",              topics: ["struct", "impl"] },
+      { id: "rust-enum",      title: "Enums & Option",     summary: "Tagged unions; Option<T> instead of null.", topics: ["enum", "Option", "Some/None"] },
+      { id: "rust-traits",    title: "Traits",             summary: "Shared behavior across types.",           topics: ["trait", "impl Trait for", "derive"] },
+    ]},
+    { id: "rust-collections", icon: "06", title: "Collections", summary: "Vec, HashMap, slices.", lessons: [
+      { id: "rust-vec",       title: "Vec<T>",             summary: "Growable array.",                          topics: ["Vec", "push", "iter"] },
+      { id: "rust-hashmap",   title: "HashMap<K,V>",       summary: "Key/value with the hashing built in.",     topics: ["HashMap", "insert", "get"] },
+      { id: "rust-slice",     title: "Slices &[T]",        summary: "Views into contiguous data.",              topics: ["&[T]", "&str", "len"] },
+    ]},
+    { id: "rust-errors", icon: "07", title: "Errors", summary: "Result and ?.", lessons: [
+      { id: "rust-result",    title: "Result<T, E>",       summary: "Recoverable errors as values.",            topics: ["Result", "Ok", "Err"] },
+      { id: "rust-question",  title: "The ? operator",     summary: "Concise error propagation.",               topics: ["?", "From"] },
+    ]},
+    { id: "rust-cargo", icon: "08", title: "Cargo & ecosystem", summary: "Tooling that makes Rust pleasant.", lessons: [
+      { id: "rust-cargo",     title: "Cargo basics",       summary: "build, run, test, add.",                   topics: ["cargo new", "cargo run", "cargo test"] },
+      { id: "rust-crates",    title: "Crates",             summary: "Reusing code from crates.io.",             topics: ["Cargo.toml", "dependencies"] },
+    ]},
+  ],
+
+  go: [
+    { id: "go-basics", icon: "01", title: "Go basics", summary: "Hello world, types, packages.", lessons: [
+      { id: "go-hello",       title: "Hello, world",       summary: "Your first Go program.",                  topics: ["package", "import", "func main"] },
+      { id: "go-types",       title: "Primitive types",    summary: "int, float64, string, bool, rune.",        topics: ["int", "string", "bool", "rune"] },
+      { id: "go-vars",        title: "Variables & const",  summary: ":= short declarations and const.",         topics: [":=", "var", "const"] },
+    ]},
+    { id: "go-flow", icon: "02", title: "Control flow", summary: "if, for, switch.", lessons: [
+      { id: "go-if",          title: "if with init",       summary: "if x := f(); x > 0 …",                     topics: ["if", "init statement"] },
+      { id: "go-for",         title: "The for loop",       summary: "Go's only loop, many forms.",              topics: ["for", "range"] },
+      { id: "go-switch",      title: "switch",             summary: "Cases that don't fall through.",           topics: ["switch", "case"] },
+    ]},
+    { id: "go-functions", icon: "03", title: "Functions", summary: "Multiple returns, defer, methods.", lessons: [
+      { id: "go-fn",          title: "Functions",          summary: "Multiple return values are first-class.",  topics: ["func", "multiple return"] },
+      { id: "go-defer",       title: "defer",              summary: "Cleanup that runs at function exit.",      topics: ["defer", "cleanup"] },
+      { id: "go-methods",     title: "Methods on types",   summary: "Receiver functions.",                      topics: ["receiver", "(t *T)"] },
+    ]},
+    { id: "go-data", icon: "04", title: "Data structures", summary: "Slices, maps, structs.", lessons: [
+      { id: "go-slice",       title: "Slices",             summary: "Dynamic views over arrays.",               topics: ["[]int", "append", "len/cap"] },
+      { id: "go-map",         title: "Maps",               summary: "Built-in key/value.",                       topics: ["map[K]V", "delete"] },
+      { id: "go-struct",      title: "Structs",            summary: "Composite types with named fields.",       topics: ["struct", "field access"] },
+    ]},
+    { id: "go-interfaces", icon: "05", title: "Interfaces", summary: "Implicitly satisfied contracts.", lessons: [
+      { id: "go-iface",       title: "Interface basics",   summary: "Define behavior, get polymorphism.",       topics: ["interface", "duck typing"] },
+      { id: "go-empty",       title: "interface{}",        summary: "The escape hatch — and when to use it.",   topics: ["interface{}", "any"] },
+    ]},
+    { id: "go-errors", icon: "06", title: "Errors", summary: "errors as values.", lessons: [
+      { id: "go-err",         title: "if err != nil",      summary: "Go's love-it-or-hate-it idiom.",           topics: ["error", "errors.New"] },
+      { id: "go-wrap",        title: "Wrapping errors",    summary: "errors.Is / errors.As / fmt.Errorf %w.",   topics: ["errors.Is", "fmt.Errorf"] },
+    ]},
+    { id: "go-concurrency", icon: "07", title: "Concurrency", summary: "Goroutines and channels.", lessons: [
+      { id: "go-goroutine",   title: "Goroutines",         summary: "Concurrent functions, cheap to spawn.",    topics: ["go", "goroutine"] },
+      { id: "go-channel",     title: "Channels",           summary: "Communication, not shared memory.",        topics: ["chan", "<-", "make(chan)"] },
+      { id: "go-select",      title: "select",             summary: "Multiplex over multiple channels.",        topics: ["select", "case <-ch"] },
+    ]},
+    { id: "go-ecosystem", icon: "08", title: "Ecosystem", summary: "Modules, testing, tooling.", lessons: [
+      { id: "go-modules",     title: "Go modules",         summary: "go mod, go.sum, dependency management.",   topics: ["go mod", "go.sum"] },
+      { id: "go-testing",     title: "Testing",            summary: "go test and table-driven tests.",          topics: ["testing.T", "t.Run", "table tests"] },
+    ]},
+  ],
+
+  ruby: [
+    { id: "ruby-basics", icon: "01", title: "Ruby basics", summary: "Hello world, types, variables.", lessons: [
+      { id: "ruby-hello",     title: "Hello, world",       summary: "puts and the no-fuss start.",              topics: ["puts", "print", "p"] },
+      { id: "ruby-vars",      title: "Variables",          summary: "Local, instance, class, global.",          topics: ["@x", "@@x", "$x", "CONST"] },
+      { id: "ruby-types",     title: "Numbers & Strings",  summary: "Integer, Float, String, Symbol.",          topics: ["Integer", "Float", "String", "Symbol"] },
+    ]},
+    { id: "ruby-flow", icon: "02", title: "Control flow", summary: "if, case, loops.", lessons: [
+      { id: "ruby-if",        title: "if / unless",        summary: "Branches both forward and reversed.",      topics: ["if", "unless", "ternary"] },
+      { id: "ruby-loops",     title: "Loops & times",      summary: "while, until, 5.times.",                    topics: ["while", "until", "times"] },
+      { id: "ruby-case",      title: "case / when",        summary: "Pattern matching, Ruby-style.",            topics: ["case", "when", "in"] },
+    ]},
+    { id: "ruby-methods", icon: "03", title: "Methods & blocks", summary: "def, blocks, procs, lambdas.", lessons: [
+      { id: "ruby-def",       title: "def",                summary: "Methods, default args, splat.",            topics: ["def", "*args", "**kwargs"] },
+      { id: "ruby-block",     title: "Blocks",             summary: "do…end and { … }.",                         topics: ["yield", "do/end", "block_given?"] },
+      { id: "ruby-proc",      title: "Procs & lambdas",    summary: "First-class callable objects.",            topics: ["Proc.new", "lambda", "->"] },
+    ]},
+    { id: "ruby-collections", icon: "04", title: "Collections", summary: "Arrays, hashes, enumerable.", lessons: [
+      { id: "ruby-array",     title: "Arrays",             summary: "[], push, map, select.",                    topics: ["Array", "map", "select", "reject"] },
+      { id: "ruby-hash",      title: "Hashes",             summary: "{key: value} key/value pairs.",             topics: ["Hash", "each_pair", "merge"] },
+      { id: "ruby-enum",      title: "Enumerable",         summary: "The module that powers it all.",            topics: ["each", "map", "reduce", "any?"] },
+    ]},
+    { id: "ruby-oop", icon: "05", title: "Object-oriented Ruby", summary: "Classes, modules, inheritance.", lessons: [
+      { id: "ruby-class",     title: "Classes",            summary: "class, initialize, attr_*.",                topics: ["class", "initialize", "attr_accessor"] },
+      { id: "ruby-inherit",   title: "Inheritance",        summary: "< for parent class, super.",                topics: ["<", "super"] },
+      { id: "ruby-module",    title: "Modules & mixins",   summary: "include vs extend.",                        topics: ["module", "include", "extend"] },
+    ]},
+    { id: "ruby-strings", icon: "06", title: "Strings & regex", summary: "Power tools for text.", lessons: [
+      { id: "ruby-interp",    title: "Interpolation",      summary: "\"#{x}\" beats concatenation.",            topics: ["#{}", "double-quoted"] },
+      { id: "ruby-regex",     title: "Regex",              summary: "/pattern/ as a first-class type.",          topics: ["/regex/", "=~", "scan"] },
+    ]},
+    { id: "ruby-errors", icon: "07", title: "Exceptions", summary: "begin/rescue/raise.", lessons: [
+      { id: "ruby-rescue",    title: "begin / rescue",     summary: "Handling errors in Ruby.",                  topics: ["begin", "rescue", "ensure"] },
+      { id: "ruby-raise",     title: "Raising errors",     summary: "raise + custom exception classes.",         topics: ["raise", "class < StandardError"] },
+    ]},
+    { id: "ruby-tools", icon: "08", title: "Tools & gems", summary: "Bundler, gems, irb.", lessons: [
+      { id: "ruby-irb",       title: "irb & pry",          summary: "The REPL is your friend.",                  topics: ["irb", "pry"] },
+      { id: "ruby-gems",      title: "Gems & Bundler",     summary: "Adding libraries to your project.",          topics: ["gem install", "Gemfile", "bundle"] },
+    ]},
+  ],
+
 };

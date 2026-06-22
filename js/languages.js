@@ -216,6 +216,62 @@ button:hover { background: #1177bb; }
     builtins: ["rgb","rgba","hsl","hsla","var","calc","url","linear-gradient","radial-gradient","translate","rotate","scale","skew","matrix","px","em","rem","vh","vw","%"],
     comment: { blockOpen: "/*", blockClose: "*/" },
   },
+  {
+    id: "rust",
+    name: "Rust",
+    ext: "rs",
+    runner: "ai",
+    docsURL: "https://doc.rust-lang.org/book/",
+    starter: `// Rust runs via AI evaluation here.
+
+fn main() {
+    for i in 0..5 {
+        println!("hi {}", i);
+    }
+}
+`,
+    keywords: ["as","async","await","break","const","continue","crate","dyn","else","enum","extern","false","fn","for","if","impl","in","let","loop","match","mod","move","mut","pub","ref","return","Self","self","static","struct","super","trait","true","type","union","unsafe","use","where","while","yield"],
+    builtins: ["Vec","String","str","i8","i16","i32","i64","i128","u8","u16","u32","u64","u128","f32","f64","bool","char","Option","Result","Some","None","Ok","Err","Box","Rc","Arc","HashMap","HashSet","println","print","format","vec","Default","Clone","Copy","Debug","Display"],
+    comment: { line: "//", blockOpen: "/*", blockClose: "*/" },
+  },
+  {
+    id: "go",
+    name: "Go",
+    ext: "go",
+    runner: "ai",
+    docsURL: "https://go.dev/doc/",
+    starter: `// Go runs via AI evaluation here.
+
+package main
+
+import "fmt"
+
+func main() {
+    for i := 0; i < 5; i++ {
+        fmt.Println("hi", i)
+    }
+}
+`,
+    keywords: ["break","case","chan","const","continue","default","defer","else","fallthrough","for","func","go","goto","if","import","interface","map","package","range","return","select","struct","switch","type","var"],
+    builtins: ["bool","byte","complex64","complex128","error","float32","float64","int","int8","int16","int32","int64","rune","string","uint","uint8","uint16","uint32","uint64","uintptr","true","false","iota","nil","append","cap","close","copy","delete","len","make","new","panic","print","println","recover","fmt","strings","strconv","io","os","time","sync"],
+    comment: { line: "//", blockOpen: "/*", blockClose: "*/" },
+  },
+  {
+    id: "ruby",
+    name: "Ruby",
+    ext: "rb",
+    runner: "ai",
+    docsURL: "https://www.ruby-lang.org/en/documentation/",
+    starter: `# Ruby runs via AI evaluation here.
+
+5.times do |i|
+  puts "hi #{i}"
+end
+`,
+    keywords: ["BEGIN","END","alias","and","begin","break","case","class","def","defined?","do","else","elsif","end","ensure","false","for","if","in","module","next","nil","not","or","redo","rescue","retry","return","self","super","then","true","undef","unless","until","when","while","yield"],
+    builtins: ["puts","print","p","pp","gets","require","require_relative","attr_accessor","attr_reader","attr_writer","Array","Hash","String","Integer","Float","Range","Symbol","Proc","Lambda","Numeric","Object","Class","Module","Comparable","Enumerable","raise","Exception","StandardError"],
+    comment: { line: "#", blockOpen: "=begin", blockClose: "=end" },
+  },
 ];
 
 window.findLanguage = (id) => LANGUAGES.find(l => l.id === id) || LANGUAGES[0];

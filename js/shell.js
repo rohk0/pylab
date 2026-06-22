@@ -214,9 +214,19 @@ function buildShell(activeId) {
       e.preventDefault();
       openCommandPalette();
     }
+    // Show keyboard shortcuts overlay. Ignore when the user is typing.
+    if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const tag = (document.activeElement && document.activeElement.tagName) || "";
+      if (!/^(INPUT|TEXTAREA|SELECT)$/.test(tag) && !document.activeElement?.isContentEditable) {
+        e.preventDefault();
+        openKeyboardShortcuts();
+      }
+    }
     if (e.key === "Escape") {
       const app = document.getElementById("app-root");
       if (app && app.classList.contains("drawer-open")) closeDrawer();
+      const kb = document.getElementById("kbshortcuts");
+      if (kb) kb.remove();
     }
   });
 
@@ -463,6 +473,44 @@ function renderPage(activeId, rendererName) {
   }
 }
 
+// ----- Keyboard shortcuts overlay -----
+function openKeyboardShortcuts() {
+  if (document.getElementById("kbshortcuts")) return;
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+  const mod = isMac ? "⌘" : "Ctrl";
+  const shortcuts = [
+    [`${mod} + K`,    "Open command palette / search"],
+    [`${mod} + Enter`, "Run code in any editor"],
+    ["?",             "Show this keyboard shortcuts overlay"],
+    ["Esc",           "Close panel / modal / drawer"],
+    ["Tab",           "Indent in editor"],
+    ["Shift + Tab",   "Outdent in editor"],
+  ];
+  const root = document.createElement("div");
+  root.id = "kbshortcuts";
+  root.className = "kbshortcuts-backdrop";
+  root.innerHTML = `
+    <div class="kbshortcuts" role="dialog" aria-modal="true" aria-labelledby="kbshortcuts-title">
+      <h3 id="kbshortcuts-title">
+        Keyboard shortcuts
+        <button type="button" aria-label="Close">×</button>
+      </h3>
+      ${shortcuts.map(([key, label]) => `
+        <div class="kbshortcut-row">
+          <span class="label">${label}</span>
+          <kbd>${key}</kbd>
+        </div>
+      `).join("")}
+      <div class="kbshortcuts-hint">Press ? anytime to reopen</div>
+    </div>
+  `;
+  document.body.appendChild(root);
+  const close = () => root.remove();
+  root.querySelector("button").onclick = close;
+  root.addEventListener("click", (e) => { if (e.target === root) close(); });
+}
+
 window.escapeHTML = escapeHTML;
 window.buildShell = buildShell;
 window.renderPage = renderPage;
+window.openKeyboardShortcuts = openKeyboardShortcuts;
