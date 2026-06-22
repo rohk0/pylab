@@ -99,6 +99,7 @@ function renderLessons() {
             <div class="h1">${lang.name} curriculum</div>
             <div class="subtle">${units.reduce((a, u) => a + (u.lessons || []).length, 0)} lessons across ${units.length} units. ${source === "ai" ? "AI-generated · " : source === "baked" ? "Curated · lesson bodies generated on demand · " : ""}Each ends with a typed coding exercise.</div>
           </div>
+          ${placementCTAHTML(langId, lang)}
           ${source === "ai" ? `<button class="ai-btn" id="regen-curr">Regenerate</button>` :
             source === "baked" ? `<button class="ai-btn" id="regen-curr">Replace with AI</button>` : ""}
         </div>
@@ -217,4 +218,27 @@ Rules:
   }
 
   paint();
+}
+
+// "Find Your Level" CTA pill, shown next to the curriculum heading.
+// If the user already took placement for this language, show a
+// compact "retake" link instead of the full call-to-action.
+function placementCTAHTML(langId, lang) {
+  const prior = (State.data.placement && State.data.placement[langId]) || null;
+  if (prior) {
+    return `
+      <a href="placement.html?lang=${encodeURIComponent(langId)}"
+         class="btn ghost" style="font-size:11.5px;padding:5px 10px;"
+         title="You placed at level ${prior.level}/5 (${prior.correct}/${prior.total} correct). Click to retake.">
+        ↻ Retake placement · Lv ${prior.level}/5
+      </a>
+    `;
+  }
+  return `
+    <a href="placement.html?lang=${encodeURIComponent(langId)}"
+       class="ai-btn" style="text-decoration:none;"
+       title="6 quick adaptive questions — start where you actually belong.">
+      🎯 Find Your Level
+    </a>
+  `;
 }

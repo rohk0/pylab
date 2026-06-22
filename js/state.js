@@ -25,6 +25,7 @@
       tabSize: 4,
     },
     weeklyGoal: 250,         // XP per week
+    placement: {},           // langId -> { level, at, correct, total }
   });
 
   // Merge an incoming partial state with our defaults so we never
