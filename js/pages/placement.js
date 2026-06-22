@@ -354,11 +354,52 @@ Constraints:
       { role: "system", content: sys },
       { role: "user",   content: `Give me one ${lang.name} question at difficulty ${difficulty}/5.` }
     ], { maxTokens: 800, temperature: 0.7, speed: "fast" });
-    if (!data || !Array.isArray(data.choices) || data.choices.length !== 4) return null;
-    if (typeof data.answer !== "number" || data.answer < 0 || data.answer > 3) return null;
-    return data;
+    return normalizeQuestion(data);
   } catch (e) {
     console.warn("[placement] generate failed:", e?.message || e);
     return null;
   }
+}
+
+// Models occasionally return slightly different shapes: `options`
+// instead of `choices`, a letter ("B") instead of an integer, or
+// the answer text rather than its index. Normalize all of that so
+// the rest of the flow can rely on a strict { question, choices,
+// answer (number 0-3), topic, explain } shape.
+function normalizeQuestion(data) {
+  if (!data || typeof data !== "object") return null;
+  let choices = data.choices || data.options || data.answers;
+  if (!Array.isArray(choices)) return null;
+  choices = choices.map(c => typeof c === "string" ? c : (c?.text || c?.label || String(c)));
+  if (choices.length < 2) return null;
+  // Trim or pad to 4 for consistent UI; favor trimming the tail.
+  if (choices.length > 4) choices = choices.slice(0, 4);
+
+  let answer = data.answer;
+  if (typeof answer === "string") {
+    const s = answer.trim();
+    // Letter form: "A" / "B" / "C" / "D"
+    if (/^[A-Da-d]$/.test(s)) answer = s.toUpperCase().charCodeAt(0) - 65;
+    // Numeric string: "0" / "1" / etc
+    else if (/^[0-3]$/.test(s)) answer = parseInt(s, 10);
+    // Otherwise treat as the answer TEXT and find its index
+    else {
+      const idx = choices.findIndex(c => c.trim().toLowerCase() === s.toLowerCase());
+      answer = idx >= 0 ? idx : NaN;
+    }
+  }
+  if (typeof answer !== "number" || isNaN(answer)) return null;
+  if (answer < 0 || answer >= choices.length) return null;
+
+  const question = data.question || data.q || data.prompt;
+  if (!question || typeof question !== "string") return null;
+
+  return {
+    question,
+    code: typeof data.code === "string" ? data.code : "",
+    choices,
+    answer,
+    topic: data.topic || data.concept || "Concept",
+    explain: data.explain || data.explanation || "",
+  };
 }
