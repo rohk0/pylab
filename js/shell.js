@@ -3,6 +3,9 @@
 // command palette, theme toggle. Mounted into <body> on every page.
 // ============================================================
 
+const ASSET_VERSION = "v=6";
+const assetUrl = (path) => `${path}?${ASSET_VERSION}`;
+
 const NAV = [
   { id: "dashboard",  href: "dashboard.html",  label: "Dashboard",  icon: iconHome,    activity: true },
   { id: "lessons",    href: "lessons.html",    label: "Lessons",    icon: iconBook,    activity: true },
@@ -104,18 +107,18 @@ function iconTheme()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="cu
 
 function buildShell(activeId) {
   // Ensure AI stylesheet is loaded.
-  if (!document.querySelector('link[href="css/ai.css"]')) {
+  if (!document.querySelector('link[href^="css/ai.css"]')) {
     const link = document.createElement("link");
-    link.rel = "stylesheet"; link.href = "css/ai.css";
+    link.rel = "stylesheet"; link.href = assetUrl("css/ai.css");
     document.head.appendChild(link);
   }
 
   const aiReady = typeof AI !== "undefined" && AI.available();
 
   // Ensure polish.css is loaded.
-  if (!document.querySelector('link[href="css/polish.css"]')) {
+  if (!document.querySelector('link[href^="css/polish.css"]')) {
     const link = document.createElement("link");
-    link.rel = "stylesheet"; link.href = "css/polish.css";
+    link.rel = "stylesheet"; link.href = assetUrl("css/polish.css");
     document.head.appendChild(link);
   }
 
@@ -151,7 +154,7 @@ function buildShell(activeId) {
           <div class="xp-pill" id="xp-pill" title="XP / Level"><span class="dot"></span><span>Lv ${State.data.level}</span><span style="color:var(--fg-mute)">·</span><span id="xp-num">${State.data.xp} XP</span></div>
           ${userTrigger()}
         </div>
-      </div>
+      </header>
 
       <nav class="activity" aria-label="Primary navigation">
         ${NAV.filter(n => n.activity).map(n => `
@@ -398,5 +401,68 @@ function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function showPageLoadError(rendererName, error) {
+  const main = document.getElementById("main");
+  const sidebar = document.getElementById("sidebar");
+  const message = error?.message || `${rendererName} is not available.`;
+  if (sidebar) {
+    sidebar.innerHTML = `
+      <div class="sb-header">Recovery</div>
+      <a class="sb-item" href="dashboard.html">Dashboard</a>
+      <a class="sb-item" href="./">Home</a>
+    `;
+  }
+  if (!main) return;
+  main.innerHTML = `
+    <div class="tabs"><div class="tab active">Page load error</div></div>
+    <div class="page-narrow">
+      <div class="h1">This page needs a fresh reload.</div>
+      <div class="subtle">
+        The app shell loaded, but the page script did not finish. This can happen after a GitHub Pages update while the browser still has older files cached.
+      </div>
+      <div class="feedback bad" style="margin-top:14px;">
+        <b>${escapeHTML(message)}</b>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn primary" id="reload-page">Reload page</button>
+        <button class="btn" id="clear-site-cache">Clear local cache</button>
+        <a class="btn" href="dashboard.html">Open dashboard</a>
+      </div>
+    </div>
+  `;
+  document.getElementById("reload-page")?.addEventListener("click", () => location.reload());
+  document.getElementById("clear-site-cache")?.addEventListener("click", async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+    } catch (e) {
+      console.warn("[shell] cache recovery failed:", e);
+    }
+    location.reload();
+  });
+}
+
+function renderPage(activeId, rendererName) {
+  buildShell(activeId);
+  const renderer = window[rendererName];
+  if (typeof renderer !== "function") {
+    showPageLoadError(rendererName);
+    return;
+  }
+  try {
+    renderer();
+  } catch (error) {
+    console.error(`[shell] ${rendererName} failed:`, error);
+    showPageLoadError(rendererName, error);
+  }
+}
+
 window.escapeHTML = escapeHTML;
 window.buildShell = buildShell;
+window.renderPage = renderPage;

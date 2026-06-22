@@ -20,7 +20,7 @@
     lang: "python",          // active language: python|javascript|java|cpp|c|sql|html|css|typescript
     playgroundFiles: [],     // {id, name, code, updated, lang}
     settings: {
-      theme: "dark",
+      theme: "light",
       fontSize: 13,
       tabSize: 4,
     },
@@ -57,7 +57,13 @@
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return defaults();
-      return withDefaults(JSON.parse(raw));
+      const loaded = withDefaults(JSON.parse(raw));
+      if (!localStorage.getItem("pylab.theme-default-light.v1")) {
+        loaded.settings.theme = "light";
+        localStorage.setItem("pylab.theme-default-light.v1", "1");
+        localStorage.setItem(KEY, JSON.stringify(loaded));
+      }
+      return loaded;
     } catch (e) {
       console.warn("State load failed:", e);
       return defaults();

@@ -20,8 +20,9 @@
   // GitHub Pages serves the site under /pylab/, so use a relative path
   // for the SW scope.
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").then(
+    navigator.serviceWorker.register("sw.js?v=6").then(
       (reg) => {
+        reg.update?.();
         // When a new SW takes over, surface a quiet toast nudging a reload.
         reg.addEventListener("updatefound", () => {
           const sw = reg.installing;
@@ -36,6 +37,13 @@
       },
       (err) => console.warn("[pwa] SW registration failed:", err.message)
     );
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    location.reload();
   });
 
   // Capture the install prompt so we can offer it later via a UI button.

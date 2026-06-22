@@ -15,7 +15,7 @@
 //     caches get evicted on activate
 // ============================================================
 
-const CACHE_VERSION = "pylab-v4";
+const CACHE_VERSION = "pylab-v6";
 
 const PRECACHE = [
   "./",
@@ -85,11 +85,13 @@ self.addEventListener("fetch", (event) => {
   // delay. Fall back to cache when offline, then to the index page.
   if (req.mode === "navigate" || (req.destination === "document")) {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-cache" })
         .then((resp) => {
           // Update the cache opportunistically.
-          const clone = resp.clone();
-          caches.open(CACHE_VERSION).then((c) => c.put(req, clone)).catch(() => {});
+          if (resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE_VERSION).then((c) => c.put(req, clone)).catch(() => {});
+          }
           return resp;
         })
         .catch(() =>
@@ -99,7 +101,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first.
+  const freshAsset =
+    ["script", "style", "worker", "manifest"].includes(req.destination) ||
+    /\.(?:js|css|json)$/i.test(url.pathname);
+
+  // Code and stylesheet assets: network-first. GitHub Pages deploys can
+  // otherwise leave HTML from the network paired with old cached JS, which
+  // renders only the app shell/top bar and never fills the page content.
+  if (freshAsset) {
+    event.respondWith(
+      fetch(req, { cache: "no-cache" })
+        .then((resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE_VERSION).then((c) => c.put(req, clone)).catch(() => {});
+          }
+          return resp;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Other static assets: cache-first.
   event.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
