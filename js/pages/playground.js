@@ -232,6 +232,7 @@ function renderPlayground() {
       }
       await Runtime.runFor(editor.getValue(), langId, opts);
       if (out.children.length === 0) out.innerHTML = `<span class="dim">(program ended with no output)</span>`;
+      maybeShowErrorHelper(out, editor.getValue(), langDef);
     }
   }
 
@@ -294,4 +295,75 @@ function showImproveMenu(btn, code, editor) {
       document.removeEventListener("click", close);
     });
   }, 0);
+}
+
+// After a run, scan the output pane for error markers and append a
+// "What did I do wrong?" button if we find one. Clicking it opens
+// the AI panel with a focused prompt — the user's code, the captured
+// error, and the language — and asks for a plain-language explanation
+// and a fix.
+function maybeShowErrorHelper(outEl, code, langDef) {
+  if (!outEl) return;
+  // Avoid stacking buttons if doRun is called multiple times
+  outEl.querySelectorAll(".err-helper").forEach(n => n.remove());
+
+  // Pull all error-class spans / divs the runtime emitted as stderr.
+  const errEls = outEl.querySelectorAll(".err");
+  let errText = "";
+  errEls.forEach(e => { errText += (e.textContent || "") + "\n"; });
+  errText = errText.trim();
+
+  // For iframe-runner languages (HTML/CSS), real "errors" rarely appear
+  // in our stderr stream — skip rather than annoy with a false button.
+  if (!errText) {
+    // Fallback: scan the whole output for typical error markers
+    const all = (outEl.innerText || "").trim();
+    if (!/Traceback|Error[: ]|Exception[: ]|Uncaught/.test(all)) return;
+    errText = all;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "err-helper";
+  wrap.style.cssText = "margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;";
+  wrap.innerHTML = `
+    <button class="ai-btn" data-act="explain">What did I do wrong?</button>
+    <button class="ai-btn" data-act="fix">Fix it</button>
+    <span style="color:var(--fg-mute);font-size:11px;">AI reads the error + your code</span>
+  `;
+  outEl.appendChild(wrap);
+
+  wrap.querySelector('[data-act="explain"]').onclick = () => askErrorHelp("explain", code, errText, langDef);
+  wrap.querySelector('[data-act="fix"]').onclick     = () => askErrorHelp("fix",     code, errText, langDef);
+}
+
+async function askErrorHelp(mode, code, errText, langDef) {
+  if (!AI.available()) {
+    State.toast("AI not configured — set a Groq key in Settings.", "bad");
+    return;
+  }
+  const lang = langDef?.name || "Python";
+  AIPanel.open({
+    title: mode === "fix" ? "Fix this error" : "What went wrong?",
+    subtitle: lang,
+  });
+  AIPanel.body().innerHTML = "";
+  AIPanel.userTurn(mode === "fix"
+    ? `Fix this ${lang} code — it errored.`
+    : `My ${lang} code errored. What's going wrong, in plain language?`);
+
+  const langId = langDef?.id || "python";
+  const sys = mode === "fix"
+    ? "You're a senior " + lang + " developer. The user's code produced an error. Identify the root cause in one short paragraph, then show the corrected code in a single triple-backtick " + langId + " code fence. Keep changes minimal and explain the diff in 1-2 sentences. If the error is a known environment limitation (e.g. input() in Pyodide / browser Python), say so and provide a workaround that fits the environment."
+    : "You're a friendly " + lang + " tutor. The user's code produced an error. Reply with:\n\n1. **What it means** — one short paragraph in plain language about what this specific error is.\n2. **Why it happened** — point at the exact line / construct that triggered it. Quote the relevant code.\n3. **How to fix it** — one or two concrete options. Show a small code snippet for the recommended fix only.\n\nIf the error is a known environment limitation (e.g. OSError: [Errno 29] I/O error from input() in Pyodide / browser Python), explain that the in-browser interpreter has no real stdin and suggest hardcoding the value or using the Stdin tab below the editor instead.\n\nKeep the whole reply under 250 words.";
+
+  const user = `Language: ${lang}\n\nMy code:\n\`\`\`${langDef?.id || "python"}\n${code}\n\`\`\`\n\nError output:\n\`\`\`\n${errText.slice(0, 2000)}\n\`\`\``;
+
+  try {
+    await AIPanel.ask([
+      { role: "system", content: sys },
+      { role: "user",   content: user },
+    ], { maxTokens: 800, temperature: 0.3, speed: "fast" });
+  } catch (e) {
+    // AIPanel renders its own error
+  }
 }
